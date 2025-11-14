@@ -56,14 +56,17 @@ const updateSession = db.prepare(`
 const frontendDistPath = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDistPath));
 
-app.get("*", (req, res) => {
+app.use((req, res, next) => {
   if (
+    req.method === "GET" &&
     !req.url.startsWith("/api/") &&
     !req.url.startsWith("/socket.io/") &&
     !req.url.startsWith("/login") &&
     !req.url.startsWith("/callback")
   ) {
     res.sendFile(path.join(frontendDistPath, "index.html"));
+  } else {
+    next();
   }
 });
 app.use(morgan("dev"));
