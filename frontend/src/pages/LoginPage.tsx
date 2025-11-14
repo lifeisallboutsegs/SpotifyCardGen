@@ -24,7 +24,7 @@ import {
 import { extractAverageColor, rgbToHex } from "@/lib/colorExtractor";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+  import.meta.env.VITE_API_BASE_URL || "https://spotifycardgen.vercel.app";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -83,9 +83,9 @@ export default function LoginPage() {
       return;
     }
     thumbEl.classList.add("scrollbar-visible");
-    const thumbHeight = 200; // Fixed height of 200px
+    const thumbHeight = 200; 
     
-    // Ensure thumb doesn't exceed visible area
+   
     const maxTop = Math.max(0, visible - thumbHeight);
     const scrollable = total - visible;
     
