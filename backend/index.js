@@ -53,15 +53,28 @@ const updateSession = db.prepare(`
   WHERE session_id = ?
 `);
 
-// Serve static files from the public directory (frontend build)
-app.use(express.static(path.join(__dirname, 'public')));
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
+app.use(express.static(frontendDistPath));
+
+app.get("*", (req, res) => {
+  if (
+    !req.url.startsWith("/api/") &&
+    !req.url.startsWith("/socket.io/") &&
+    !req.url.startsWith("/login") &&
+    !req.url.startsWith("/callback")
+  ) {
+    res.sendFile(path.join(frontendDistPath, "index.html"));
+  }
+});
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({
-  origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:3000",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 async function search(songname) {
   const searchUrl = `https://api.genius.com/search?${qs.stringify({
@@ -228,8 +241,7 @@ io.on("connection", (socket) => {
           duration: data.item?.duration_ms,
           track: {
             name: data.item?.name,
-            artists: data.item?.artists?.map((a) => a.name)
-              .join(", "),
+            artists: data.item?.artists?.map((a) => a.name).join(", "),
             album: data.item?.album?.name,
             image: data.item?.album?.images?.[0]?.url,
             uri: data.item?.uri,
