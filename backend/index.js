@@ -356,7 +356,7 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/", (req, res) => {
+app.get("/api", (req, res) => {
   const upt = Date.now() - uptime;
   const hours = Math.floor(upt / 3600000);
   const minutes = Math.floor((upt % 3600000) / 60000);
