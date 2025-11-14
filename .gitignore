@@ -15,7 +15,7 @@ package-lock.json
 .env.*.local
 
 # Build Output
-dist/
+
 build/
 tmp/
 temp/
