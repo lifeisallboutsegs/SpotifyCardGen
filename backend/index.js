@@ -466,9 +466,11 @@ app.get("/api/lyrics", async (req, res) => {
       return res.json(lyricsCache.get(cacheKey));
     }
 
-    let searchResults = await search(songname);
-    console.log(searchResults);
-    if (artist && (!searchResults.results || searchResults.results.length === 0)) {
+    let searchResults = await search(songname.split("-" || "by")[0].trim());
+    if (
+      artist &&
+      (!searchResults.results || searchResults.results.length === 0)
+    ) {
       searchResults = await search(`${songname} by ${artist}`);
     }
 
@@ -476,11 +478,11 @@ app.get("/api/lyrics", async (req, res) => {
       return res.status(404).json({ error: "No songs found" });
     }
 
-    const songnameLower = songname.toLowerCase();
+    const songnameLower = songname.toLowerCase().split("-" || "by")[0].trim();
     const artistLower = artist ? artist.toLowerCase() : null;
     let matchedResult = null;
     for (const result of searchResults.results) {
-      console.log(result.title, "-", result.artist);
+      
       const titleLower = result.title.toLowerCase();
       const resultArtistLower = result.artist.toLowerCase();
       if (titleLower.includes(songnameLower)) {

@@ -157,12 +157,24 @@ const LyricsViewer = ({
     };
   }, []);
 
-  const defaultLyricsText = `
-
-
-Looks like you have to guess the lyrics for this song.\n
-
-`;
+  const defaultLyricsText = [
+    `
+    
+    Looks like you have to guess the lyrics for this song.
+    
+    `,
+    `
+    
+    Hmm. We don't know the lyrics for this one.
+    
+    `,
+    `
+    
+    You caught us, we're still working on getting lyrics for this one.
+    
+    `,
+    "",
+  ][Math.floor(Math.random() * 4)];
 
   const lyricsText = lyrics || defaultLyricsText;
   const linesArray = lyricsText.split("\n");
