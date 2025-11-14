@@ -1,0 +1,729 @@
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  setSession,
+  setUser,
+  setLoading,
+  setError,
+  logout,
+} from "@/store/authSlice";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CountryFlag } from "@/components/CountryFlag";
+import { Music, Play, Disc3, ExternalLink } from "lucide-react";
+import { extractAverageColor, rgbToHex } from "@/lib/colorExtractor";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/" });
+  const dispatch = useAppDispatch();
+  const { session, user, loading, error } = useAppSelector(
+    (state) => state.auth
+  );
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [accentColor, setAccentColor] = useState("#535353");
+  const [topArtists, setTopArtists] = useState([]);
+  const [topTracks, setTopTracks] = useState([]);
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
+  const mainThumbRef = useRef<HTMLDivElement | null>(null);
+  const artistsScrollRef = useRef<HTMLDivElement | null>(null);
+  const artistsThumbRef = useRef<HTMLDivElement | null>(null);
+  const artistsWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleSessionFromUrl = async () => {
+      const sessionFromUrl = (search as any)?.session;
+
+      if (sessionFromUrl) {
+        dispatch(setSession(sessionFromUrl));
+        window.history.replaceState({}, "", "/");
+      }
+    };
+
+    handleSessionFromUrl();
+  }, [search, dispatch]);
+
+  useEffect(() => {
+    if (session) {
+      fetchUserData();
+    } else {
+      dispatch(setLoading(false));
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (user?.images?.[0]?.url) {
+      extractAverageColor(user.images[0].url).then((color) => {
+        setAccentColor(rgbToHex(color.r, color.g, color.b));
+      });
+    }
+  }, [user]);
+
+  const updateThumb = (
+    scrollEl: HTMLDivElement | null,
+    thumbEl: HTMLDivElement | null
+  ) => {
+    if (!scrollEl || !thumbEl) return;
+    const visible = scrollEl.clientHeight;
+    const total = scrollEl.scrollHeight;
+    if (total <= visible) {
+      thumbEl.style.opacity = "0";
+      return;
+    }
+    thumbEl.style.opacity = "1";
+    const ratio = visible / total;
+    const thumbHeight = Math.max(24, Math.floor(visible * ratio));
+    const maxTop = visible - thumbHeight;
+    const scrollRatio = scrollEl.scrollTop / (total - visible);
+    const top = Math.round(scrollRatio * maxTop);
+    thumbEl.style.height = thumbHeight + "px";
+    thumbEl.style.top = top + "px";
+  };
+
+  const updateHorizontalThumb = (
+    scrollEl: HTMLDivElement | null,
+    thumbEl: HTMLDivElement | null
+  ) => {
+    if (!scrollEl || !thumbEl) return;
+    const visible = scrollEl.clientWidth;
+    const total = scrollEl.scrollWidth;
+    if (total <= visible) {
+      thumbEl.style.opacity = "0";
+      return;
+    }
+    thumbEl.style.opacity = "1";
+    const ratio = visible / total;
+    const thumbWidth = Math.max(24, Math.floor(visible * ratio));
+    const maxLeft = visible - thumbWidth;
+    const scrollRatio = scrollEl.scrollLeft / (total - visible);
+    const left = Math.round(scrollRatio * maxLeft);
+    thumbEl.style.width = thumbWidth + "px";
+    thumbEl.style.left = left + "px";
+    thumbEl.style.height = "4px";
+    thumbEl.style.top = "auto";
+    thumbEl.style.bottom = "0";
+  };
+
+  useEffect(() => {
+    const scrollEl = mainScrollRef.current;
+    const thumbEl = mainThumbRef.current;
+    if (scrollEl && thumbEl) {
+      const onScroll = () => updateThumb(scrollEl, thumbEl);
+      const onResize = () => updateThumb(scrollEl, thumbEl);
+      scrollEl.addEventListener("scroll", onScroll);
+      window.addEventListener("resize", onResize);
+
+      updateThumb(scrollEl, thumbEl);
+      return () => {
+        scrollEl.removeEventListener("scroll", onScroll);
+        window.removeEventListener("resize", onResize);
+      };
+    }
+  }, [user, topArtists, topTracks]);
+
+  useEffect(() => {
+    const scrollEl = artistsScrollRef.current;
+    const thumbEl = artistsThumbRef.current;
+    const wrapperEl = artistsWrapperRef.current;
+    if (scrollEl && thumbEl && wrapperEl) {
+      const onScroll = () => updateHorizontalThumb(scrollEl, thumbEl);
+      const onResize = () => updateHorizontalThumb(scrollEl, thumbEl);
+      scrollEl.addEventListener("scroll", onScroll);
+      window.addEventListener("resize", onResize);
+
+      // Horizontal mouse wheel scrolling - attach to wrapper to catch events from child elements
+      const onWheel = (e: WheelEvent) => {
+        // Check if the event target is within the wrapper area
+        const target = e.target as Node;
+        if (wrapperEl.contains(target) || wrapperEl === target) {
+          // Handle both vertical wheel (deltaY) and horizontal wheel/trackpad (deltaX)
+          if (e.deltaY !== 0 || e.deltaX !== 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Use deltaY for vertical wheel scrolling, deltaX for horizontal trackpad gestures
+            const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
+            scrollEl.scrollLeft += scrollAmount;
+          }
+        }
+      };
+      // Use capturing phase to catch events from child elements (cards, images, buttons, etc.)
+      wrapperEl.addEventListener("wheel", onWheel, { passive: false, capture: true });
+
+      // Touch/swipe support for mobile
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let isScrolling = false;
+
+      const onTouchStart = (e: TouchEvent) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        isScrolling = false;
+      };
+
+      const onTouchMove = (e: TouchEvent) => {
+        if (!isScrolling) {
+          const touchCurrentX = e.touches[0].clientX;
+          const touchCurrentY = e.touches[0].clientY;
+          const diffX = Math.abs(touchCurrentX - touchStartX);
+          const diffY = Math.abs(touchCurrentY - touchStartY);
+
+          // Determine if horizontal or vertical scroll
+          if (diffX > diffY) {
+            isScrolling = true;
+          }
+        }
+      };
+
+      scrollEl.addEventListener("touchstart", onTouchStart, { passive: true });
+      scrollEl.addEventListener("touchmove", onTouchMove, { passive: true });
+
+      updateHorizontalThumb(scrollEl, thumbEl);
+      return () => {
+        scrollEl.removeEventListener("scroll", onScroll);
+        window.removeEventListener("resize", onResize);
+        wrapperEl.removeEventListener("wheel", onWheel, { capture: true } as any);
+        scrollEl.removeEventListener("touchstart", onTouchStart);
+        scrollEl.removeEventListener("touchmove", onTouchMove);
+      };
+    }
+  }, [topArtists]);
+
+  useEffect(() => {
+    const attachDrag = (
+      scrollEl: HTMLDivElement | null,
+      thumbEl: HTMLDivElement | null
+    ) => {
+      if (!scrollEl || !thumbEl) return;
+      let dragging = false;
+      let startY = 0;
+      let startScroll = 0;
+
+      const onPointerDown = (e: MouseEvent | PointerEvent | TouchEvent) => {
+        e.preventDefault();
+        dragging = true;
+        thumbEl.classList.add("dragging");
+        if (e instanceof TouchEvent) {
+          startY = e.touches[0].clientY;
+        } else if ("clientY" in e) {
+          startY = (e as MouseEvent).clientY;
+        }
+        startScroll = scrollEl.scrollTop;
+        document.addEventListener("pointermove", onPointerMove as any);
+        document.addEventListener("pointerup", onPointerUp as any);
+        document.addEventListener(
+          "touchmove",
+          onPointerMove as any,
+          { passive: false } as any
+        );
+        document.addEventListener("touchend", onPointerUp as any);
+      };
+
+      const onPointerMove = (ev: any) => {
+        if (!dragging) return;
+        ev.preventDefault();
+        const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+        const delta = clientY - startY;
+        const visible = scrollEl.clientHeight;
+        const total = scrollEl.scrollHeight;
+        const thumbHeight = parseFloat(
+          window.getComputedStyle(thumbEl).height || "32"
+        );
+        const maxThumbTop = Math.max(1, visible - thumbHeight);
+        const scrollable = Math.max(1, total - visible);
+        const scrollDelta = (delta / maxThumbTop) * scrollable;
+        scrollEl.scrollTop = Math.min(
+          Math.max(0, startScroll + scrollDelta),
+          scrollable
+        );
+      };
+
+      const onPointerUp = () => {
+        dragging = false;
+        thumbEl.classList.remove("dragging");
+        document.removeEventListener("pointermove", onPointerMove as any);
+        document.removeEventListener("pointerup", onPointerUp as any);
+        document.removeEventListener("touchmove", onPointerMove as any);
+        document.removeEventListener("touchend", onPointerUp as any);
+      };
+
+      thumbEl.addEventListener("pointerdown", onPointerDown as any);
+      thumbEl.addEventListener(
+        "touchstart",
+        onPointerDown as any,
+        { passive: false } as any
+      );
+
+      return () => {
+        thumbEl.removeEventListener("pointerdown", onPointerDown as any);
+        thumbEl.removeEventListener("touchstart", onPointerDown as any);
+      };
+    };
+
+    const attachHorizontalDrag = (
+      scrollEl: HTMLDivElement | null,
+      thumbEl: HTMLDivElement | null
+    ) => {
+      if (!scrollEl || !thumbEl) return;
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+
+      const onPointerDown = (e: MouseEvent | PointerEvent | TouchEvent) => {
+        e.preventDefault();
+        dragging = true;
+        thumbEl.classList.add("dragging");
+        if (e instanceof TouchEvent) {
+          startX = e.touches[0].clientX;
+        } else if ("clientX" in e) {
+          startX = (e as MouseEvent).clientX;
+        }
+        startScroll = scrollEl.scrollLeft;
+        document.addEventListener("pointermove", onPointerMove as any);
+        document.addEventListener("pointerup", onPointerUp as any);
+        document.addEventListener(
+          "touchmove",
+          onPointerMove as any,
+          { passive: false } as any
+        );
+        document.addEventListener("touchend", onPointerUp as any);
+      };
+
+      const onPointerMove = (ev: any) => {
+        if (!dragging) return;
+        ev.preventDefault();
+        const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+        const delta = clientX - startX;
+        const visible = scrollEl.clientWidth;
+        const total = scrollEl.scrollWidth;
+        const thumbWidth = parseFloat(
+          window.getComputedStyle(thumbEl).width || "32"
+        );
+        const maxThumbLeft = Math.max(1, visible - thumbWidth);
+        const scrollable = Math.max(1, total - visible);
+        const scrollDelta = (delta / maxThumbLeft) * scrollable;
+        scrollEl.scrollLeft = Math.min(
+          Math.max(0, startScroll + scrollDelta),
+          scrollable
+        );
+      };
+
+      const onPointerUp = () => {
+        dragging = false;
+        thumbEl.classList.remove("dragging");
+        document.removeEventListener("pointermove", onPointerMove as any);
+        document.removeEventListener("pointerup", onPointerUp as any);
+        document.removeEventListener("touchmove", onPointerMove as any);
+        document.removeEventListener("touchend", onPointerUp as any);
+      };
+
+      thumbEl.addEventListener("pointerdown", onPointerDown as any);
+      thumbEl.addEventListener(
+        "touchstart",
+        onPointerDown as any,
+        { passive: false } as any
+      );
+
+      return () => {
+        thumbEl.removeEventListener("pointerdown", onPointerDown as any);
+        thumbEl.removeEventListener("touchstart", onPointerDown as any);
+      };
+    };
+
+    const mainCleanup = attachDrag(mainScrollRef.current, mainThumbRef.current);
+    const artistsCleanup = attachHorizontalDrag(
+      artistsScrollRef.current,
+      artistsThumbRef.current
+    );
+    return () => {
+      if (typeof mainCleanup === "function") mainCleanup();
+      if (typeof artistsCleanup === "function") artistsCleanup();
+    };
+  }, [user, topArtists, topTracks]);
+
+  const fetchUserData = async () => {
+    dispatch(setLoading(true));
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/data`, {
+        headers: {
+          Authorization: `Bearer ${session}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.needsReauth) {
+          dispatch(logout());
+          navigate({ to: "/" });
+          setLocalError("Session expired. Please login again.");
+          return;
+        }
+        throw new Error("Failed to fetch user data");
+      }
+
+      const data = await response.json();
+      dispatch(setUser(data.user));
+      setTopArtists(data.topArtists?.items || []);
+      setTopTracks(data.topTracks?.items || []);
+    } catch (err) {
+      console.error("Error fetching user data:", err);
+      const errorMsg = err instanceof Error ? err.message : "An error occurred";
+      dispatch(setError(errorMsg));
+      setLocalError(errorMsg);
+      dispatch(logout());
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+  const handleLogin = () => {
+    window.location.href = `${API_BASE_URL}/login`;
+  };
+
+  const handleGenerateCard = () => {
+    navigate({ to: "/generate" });
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    setLocalError(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Disc3 className="h-12 w-12 text-white mx-auto animate-spin opacity-50" />
+          <p className="text-sm text-[#a7a7a7]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const displayError = error || localError;
+
+  return (
+    <div className="min-h-screen bg-[#121212] text-white flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl">
+        {displayError && (
+          <div className="mb-6">
+            <div className="p-4 bg-[#5e2e00] border border-[#ca6500] rounded-lg">
+              <p className="text-sm text-white">{displayError}</p>
+            </div>
+          </div>
+        )}
+
+        {user ? (
+          <div className="rounded-xl overflow-hidden shadow-2xl max-h-[80vh] max-w-6xl mx-auto relative">
+            <div className="h-[80vh]">
+              <div className="custom-scroll-wrapper h-full">
+                <div
+                  ref={mainScrollRef}
+                  className="overflow-y-auto h-full pb-28 custom-scroll"
+                >
+                  <div
+                    className="relative"
+                    style={{
+                      background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                    }}
+                  >
+                    <div className="px-8 pt-16 pb-8">
+                      <div className="flex items-end gap-6">
+                        <div className="relative shrink-0">
+                          <Avatar className="h-56 w-56 shadow-2xl">
+                            <AvatarImage
+                              src={user.images?.[0]?.url}
+                              alt={user.display_name}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="text-6xl font-bold bg-[#282828] text-white">
+                              {user.display_name?.[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {user.country && (
+                            <div className="absolute -bottom-2 -right-2">
+                              <CountryFlag
+                                countryCode={user.country}
+                                className="h-12 w-16 rounded-md border-0 object-cover shadow-lg"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 pb-4">
+                          <p className="text-sm font-semibold mb-2 opacity-90">
+                            Profile
+                          </p>
+                          <h1 className="text-7xl md:text-8xl font-black mb-4 tracking-tight wrap-break-word">
+                            {user.display_name}
+                          </h1>
+                          <div className="flex items-center gap-2 text-sm flex-wrap">
+                            <span className="font-medium">
+                              {(user.followers?.total || 0).toLocaleString()}{" "}
+                              followers
+                            </span>
+                            <span className="opacity-70">•</span>
+                            <span className="opacity-90">
+                              {user.product
+                                ? user.product.charAt(0).toUpperCase() +
+                                  user.product.slice(1)
+                                : "Free"}{" "}
+                              Plan
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className="relative"
+                    style={{
+                      background: `linear-gradient(180deg, ${accentColor}40 0%, #121212 15%, #121212 100%)`,
+                    }}
+                  >
+                    <div className="px-8 py-8">
+                      {topArtists.length > 0 && (
+                        <section className="mb-12">
+                          <div className="mb-6">
+                            <h2 className="text-2xl font-bold mb-1">
+                              Top artists this month
+                            </h2>
+                            <p className="text-sm text-[#a7a7a7]">
+                              Only visible to you
+                            </p>
+                          </div>
+
+                          <div
+                            ref={artistsWrapperRef}
+                            className="custom-scroll-wrapper relative"
+                          >
+                            <div
+                              ref={artistsScrollRef}
+                              className="overflow-x-auto overflow-y-hidden pb-2 custom-scroll"
+                              style={{
+                                scrollbarWidth: "none",
+                                msOverflowStyle: "none",
+                              }}
+                            >
+                              <div
+                                className="flex gap-2"
+                                style={{
+                                  width: "max-content",
+                                }}
+                              >
+                                {topArtists
+                                  .slice(0, 6)
+                                  .map((artist: any, index: number) => (
+                                    <div
+                                      key={artist.id || index}
+                                      className="bg-[#181818] hover:bg-[#282828] rounded-lg transition-all cursor-pointer group flex flex-col shrink-0"
+                                      style={{
+                                        padding: "12px",
+                                        minHeight: "224px",
+                                        width: "180px",
+                                      }}
+                                    >
+                                      <div className="relative mb-4 shrink-0">
+                                        <div className="relative w-full pb-[100%] rounded-full overflow-hidden bg-[#282828]">
+                                          <img
+                                            src={artist.images?.[0]?.url}
+                                            alt={artist.name}
+                                            className="absolute inset-0 w-full h-full object-cover"
+                                          />
+                                        </div>
+
+                                        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
+                                          {artist.external_urls?.spotify ? (
+                                            <a
+                                              href={
+                                                artist.external_urls.spotify
+                                              }
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              aria-label={`View ${artist.name} on Spotify`}
+                                            >
+                                              <button className="h-11 w-11 rounded-full bg-[#1ed760] hover:bg-[#1fdf64] shadow-xl flex items-center justify-center">
+                                                <ExternalLink className="h-5 w-5 text-black" />
+                                              </button>
+                                            </a>
+                                          ) : (
+                                            <button
+                                              className="h-11 w-11 rounded-full bg-[#6b6b6b] cursor-not-allowed shadow-xl flex items-center justify-center"
+                                              disabled
+                                            >
+                                              <ExternalLink className="h-5 w-5 text-black" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="mt-auto">
+                                        <p className="font-semibold mb-1 truncate">
+                                          {artist.name}
+                                        </p>
+                                        <p className="text-sm text-[#a7a7a7]">
+                                          Artist
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {topTracks.length > 0 && (
+                        <section className="mb-12">
+                          <div className="mb-6">
+                            <h2 className="text-2xl font-bold mb-1">
+                              Top tracks this month
+                            </h2>
+                            <p className="text-sm text-[#a7a7a7]">
+                              Only visible to you
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            {topTracks
+                              .slice(0, 4)
+                              .map((track: any, index: number) => (
+                                <div
+                                  key={track.id || index}
+                                  className="flex items-center gap-4 p-2 rounded-lg hover:bg-[#282828] transition-colors group"
+                                >
+                                  <div className="flex items-center justify-center w-10 text-[#a7a7a7] group-hover:text-white">
+                                    <span className="group-hover:hidden">
+                                      {index + 1}
+                                    </span>
+                                    <Play className="hidden group-hover:block h-4 w-4" />
+                                  </div>
+                                  <img
+                                    src={track.album?.images?.[0]?.url}
+                                    alt={track.name}
+                                    className="h-10 w-10 rounded"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium truncate">
+                                      {track.name}
+                                    </p>
+                                    <p className="text-sm text-[#a7a7a7] truncate">
+                                      {track.artists
+                                        ?.map((a: any) => a.name)
+                                        .join(", ")}
+                                    </p>
+                                  </div>
+                                  <div className="text-sm text-[#a7a7a7] hidden md:block">
+                                    {track.album?.name}
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <span className="text-sm text-[#a7a7a7]">
+                                      {Math.floor(track.duration_ms / 60000)}:
+                                      {String(
+                                        Math.floor(
+                                          (track.duration_ms % 60000) / 1000
+                                        )
+                                      ).padStart(2, "0")}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </section>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                ref={mainThumbRef}
+                className="custom-scrollbar-thumb"
+                aria-hidden="true"
+              />
+
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-full px-8 pointer-events-none">
+                <div className="max-w-2xl mx-auto flex gap-4 pointer-events-auto">
+                  <Button
+                    onClick={handleGenerateCard}
+                    className="flex-1 h-14 bg-white hover:bg-white/90 text-black font-bold rounded-full transition-all text-base"
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Generate Card
+                  </Button>
+                  <Button
+                    onClick={handleLogout}
+                    variant="outline"
+                    className="flex-1 h-14 border-[#535353] hover:border-white text-white font-bold rounded-full transition-all hover:bg-white/10 text-base"
+                  >
+                    Log out
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl overflow-hidden shadow-2xl bg-[#181818]">
+            <div className="px-8 py-16 text-center">
+              <div className="inline-flex items-center justify-center w-56 h-56 bg-[#282828] rounded-full mb-8 shadow-2xl">
+                <Music className="h-24 w-24 text-[#535353]" />
+              </div>
+              <h1 className="text-6xl md:text-7xl font-black mb-6 tracking-tight">
+                Welcome
+              </h1>
+              <p className="text-lg text-[#a7a7a7] max-w-2xl mx-auto leading-relaxed mb-8">
+                Connect your Spotify account to create beautiful cards
+                showcasing your music taste. View your top tracks, artists, and
+                currently playing songs with custom styling.
+              </p>
+
+              <Button
+                onClick={handleLogin}
+                className="h-14 px-8 bg-[#1ed760] hover:bg-[#1fdf64] hover:scale-105 text-black font-bold rounded-full transition-all text-base shadow-lg"
+              >
+                <Music className="h-5 w-5 mr-2" />
+                Log in with Spotify
+              </Button>
+            </div>
+
+            <div className="px-8 pb-16">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 bg-[#282828]/50 rounded-lg hover:bg-[#282828] transition-colors">
+                  <div className="w-12 h-12 bg-[#1ed760]/20 rounded-lg flex items-center justify-center mb-4">
+                    <Disc3 className="h-6 w-6 text-[#1ed760]" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">Top Tracks</h3>
+                  <p className="text-sm text-[#a7a7a7]">
+                    View your most played songs and create stunning visual cards
+                  </p>
+                </div>
+
+                <div className="p-6 bg-[#282828]/50 rounded-lg hover:bg-[#282828] transition-colors">
+                  <div className="w-12 h-12 bg-[#1ed760]/20 rounded-lg flex items-center justify-center mb-4">
+                    <Play className="h-6 w-6 text-[#1ed760]" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">Live Status</h3>
+                  <p className="text-sm text-[#a7a7a7]">
+                    Real-time sync with your currently playing tracks
+                  </p>
+                </div>
+
+                <div className="p-6 bg-[#282828]/50 rounded-lg hover:bg-[#282828] transition-colors">
+                  <div className="w-12 h-12 bg-[#1ed760]/20 rounded-lg flex items-center justify-center mb-4">
+                    <Music className="h-6 w-6 text-[#1ed760]" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">Favorite Artists</h3>
+                  <p className="text-sm text-[#a7a7a7]">
+                    Showcase your top artists with beautiful designs
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
