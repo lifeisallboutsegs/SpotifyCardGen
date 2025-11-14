@@ -11,7 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CountryFlag } from "@/components/CountryFlag";
-import { Music, Play, Disc3, ExternalLink, EyeOff, Users, Crown } from "lucide-react";
+import {
+  Music,
+  Play,
+  Disc3,
+  ExternalLink,
+  EyeOff,
+  Users,
+  Crown,
+} from "lucide-react";
 import { extractAverageColor, rgbToHex } from "@/lib/colorExtractor";
 
 const API_BASE_URL =
@@ -139,25 +147,24 @@ export default function LoginPage() {
       scrollEl.addEventListener("scroll", onScroll);
       window.addEventListener("resize", onResize);
 
-   
       const onWheel = (e: WheelEvent) => {
-      
         const target = e.target as Node;
         if (wrapperEl.contains(target) || wrapperEl === target) {
-         
           if (e.deltaY !== 0 || e.deltaX !== 0) {
             e.preventDefault();
             e.stopPropagation();
-          
+
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             scrollEl.scrollLeft += scrollAmount;
           }
         }
       };
-    
-      wrapperEl.addEventListener("wheel", onWheel, { passive: false, capture: true });
 
-     
+      wrapperEl.addEventListener("wheel", onWheel, {
+        passive: false,
+        capture: true,
+      });
+
       let touchStartX = 0;
       let touchStartY = 0;
       let isScrolling = false;
@@ -175,7 +182,6 @@ export default function LoginPage() {
           const diffX = Math.abs(touchCurrentX - touchStartX);
           const diffY = Math.abs(touchCurrentY - touchStartY);
 
-          
           if (diffX > diffY) {
             isScrolling = true;
           }
@@ -189,7 +195,9 @@ export default function LoginPage() {
       return () => {
         scrollEl.removeEventListener("scroll", onScroll);
         window.removeEventListener("resize", onResize);
-        wrapperEl.removeEventListener("wheel", onWheel, { capture: true } as any);
+        wrapperEl.removeEventListener("wheel", onWheel, {
+          capture: true,
+        } as any);
         scrollEl.removeEventListener("touchstart", onTouchStart);
         scrollEl.removeEventListener("touchmove", onTouchMove);
       };
@@ -423,242 +431,263 @@ export default function LoginPage() {
         {user ? (
           <div className="rounded-xl overflow-hidden shadow-2xl max-h-[80vh] max-w-6xl mx-auto relative">
             <div className="h-[80vh]">
-              <div className="custom-scroll-wrapper h-full relative bg-amber-600">
+              <div className="custom-scroll-wrapper h-full relative">
                 <div
                   ref={mainScrollRef}
-                  className="overflow-y-auto h-full pb-28 custom-scroll bg-blue-600"
+                  className="overflow-y-auto h-full custom-scroll"
                 >
-                  <div
-                    className="sticky top-0 z-10 py-4 px-8 transition-transform duration-300 ease-in-out"
-                    style={{
-                      background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                      transform: showMiniHeader ? 'translateY(0)' : 'translateY(-100%)',
-                    }}
-                  >
-                    <h1 className="text-1xl md:text-2xl font-bold tracking-tight">
-                      {user.display_name}
-                    </h1>
-                  </div>
-                  <div
-                    className="relative"
-                    style={{
-                      background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                    }}
-                  >
-                    <div className="px-8 py-10">
-                      <div className="flex items-end gap-6">
-                        <div className="relative shrink-0">
-                          <Avatar className="h-56 w-56 shadow-2xl">
-                            <AvatarImage
-                              src={user.images?.[0]?.url}
-                              alt={user.display_name}
-                              className="object-cover"
-                            />
-                            <AvatarFallback className="text-6xl font-bold bg-[#282828] text-white">
-                              {user.display_name?.[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          {user.country && (
-                            <div className="absolute bottom-0 right-0">
-                              <CountryFlag
-                                countryCode={user.country}
-                                className="h-12 w-16 rounded-xl border-0 object-cover shadow-lg"
-                              />
-                            </div>
-                          )}
-                        </div>
+                  <div className="relative">
+                    <div
+                      className="sticky top-0 z-50 pointer-events-none"
+                      style={{
+                        height: 0,
+                        overflow: "visible",
+                      }}
+                    >
+                      <div
+                        className="py-4 px-8 transition-transform duration-300 ease-in-out pointer-events-auto"
+                        style={{
+                          background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                          transform: showMiniHeader
+                            ? "translateY(0)"
+                            : "translateY(-100%)",
+                        }}
+                      >
+                        <h1 className="text-1xl md:text-2xl font-bold tracking-tight">
+                          {user.display_name}
+                        </h1>
+                      </div>
+                    </div>
 
-                        <div className="flex-1 pb-4">
-                          <p className="text-sm font-semibold mb-2 opacity-90">
-                            Profile
-                          </p>
-                          <h1 className="text-7xl md:text-8xl font-black mb-4 tracking-tight wrap-break-word">
-                            {user.display_name}
-                          </h1>
-                          <div className="flex items-center text-sm">
-                            <span className="flex items-center gap-1 font-medium text-lg">
-                              <Users className="h-5 w-5" />
-                              {(user.followers?.total || 0).toLocaleString()} followers
-                            </span>
-                            <span className="opacity-70 mx-2">•</span>
-                            <div className="bg-[#282828] rounded-full p-1">
-                              <EyeOff className="h-4 w-4" />
+                    <div>
+                      <div
+                        className="relative"
+                        style={{
+                          background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                        }}
+                      >
+                        <div className="px-8 py-10">
+                          <div className="flex items-end gap-6">
+                            <div className="relative shrink-0">
+                              <Avatar className="h-56 w-56 shadow-2xl">
+                                <AvatarImage
+                                  src={user.images?.[0]?.url}
+                                  alt={user.display_name}
+                                  className="object-cover"
+                                />
+                                <AvatarFallback className="text-6xl font-bold bg-[#282828] text-white">
+                                  {user.display_name?.[0]?.toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              {user.country && (
+                                <div className="absolute bottom-0 right-0">
+                                  <CountryFlag
+                                    countryCode={user.country}
+                                    className="h-12 w-16 rounded-xl border-0 object-cover shadow-lg"
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <span className="opacity-70 mx-2">•</span>
-                            <span className="flex items-center gap-1 opacity-90 text-lg ml-auto">
-                              <Crown className="h-5 w-5" />
-                              {user.product
-                                ? user.product.charAt(0).toUpperCase() +
-                                  user.product.slice(1)
-                                : "Free"} Plan
-                            </span>
+
+                            <div className="flex-1 pb-4">
+                              <p className="text-sm font-semibold mb-2 opacity-90">
+                                Profile
+                              </p>
+                              <h1 className="text-7xl md:text-8xl font-black mb-4 tracking-tight wrap-break-word">
+                                {user.display_name}
+                              </h1>
+                              <div className="flex items-center text-sm">
+                                <span className="flex items-center gap-1 font-medium text-lg">
+                                  <Users className="h-5 w-5" />
+                                  {(
+                                    user.followers?.total || 0
+                                  ).toLocaleString()}{" "}
+                                  followers
+                                </span>
+                                <span className="opacity-70 mx-2">•</span>
+                                <div className="bg-[#282828] rounded-full p-1">
+                                  <EyeOff className="h-4 w-4" />
+                                </div>
+                                <span className="opacity-70 mx-2">•</span>
+                                <span className="flex items-center gap-1 opacity-90 text-lg ml-auto">
+                                  <Crown className="h-5 w-5" />
+                                  {user.product
+                                    ? user.product.charAt(0).toUpperCase() +
+                                      user.product.slice(1)
+                                    : "Free"}{" "}
+                                  Plan
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div
-                    className="relative"
-                    style={{
-                      background: `linear-gradient(180deg, ${accentColor}40 0%, #121212 15%, #121212 100%)`,
-                    }}
-                  >
-                    <div className="px-8 py-8">
-                      {topArtists.length > 0 && (
-                        <section className="mb-12">
-                          <div className="mb-6">
-                            <h2 className="text-2xl font-bold mb-1">
-                              Top artists this month
-                            </h2>
-                            <p className="text-sm text-[#a7a7a7]">
-                              Only visible to you
-                            </p>
-                          </div>
+                      <div
+                        className="relative"
+                        style={{
+                          background: `linear-gradient(180deg, ${accentColor}40 0%, #121212 15%, #121212 100%)`,
+                        }}
+                      >
+                        <div className="px-8 py-8 pb-28">
+                          {topArtists.length > 0 && (
+                            <section className="mb-12">
+                              <div className="mb-6">
+                                <h2 className="text-2xl font-bold mb-1">
+                                  Top artists this month
+                                </h2>
+                                <p className="text-sm text-[#a7a7a7]">
+                                  Only visible to you
+                                </p>
+                              </div>
 
-                          <div
-                            ref={artistsWrapperRef}
-                            className="custom-scroll-wrapper relative"
-                          >
-                            <div
-                              ref={artistsScrollRef}
-                              className="overflow-x-auto overflow-y-hidden pb-2 custom-scroll"
-                              style={{
-                                scrollbarWidth: "none",
-                                msOverflowStyle: "none",
-                              }}
-                            >
                               <div
-                                className="flex gap-2"
-                                style={{
-                                  width: "max-content",
-                                }}
+                                ref={artistsWrapperRef}
+                                className="custom-scroll-wrapper relative"
                               >
-                                {topArtists
-                                  .slice(0, 6)
-                                  .map((artist: any, index: number) => (
-                                    <div
-                                      key={artist.id || index}
-                                      className="hover:bg-[#282828] rounded-xl transition-all cursor-pointer group flex flex-col shrink-0"
-                                      style={{
-                                        padding: "12px",
-                                        minHeight: "224px",
-                                        width: "180px",
-                                      }}
-                                    >
-                                      <div className="relative mb-4 shrink-0">
-                                        <div className="relative w-full pb-[100%] rounded-full overflow-hidden bg-[#282828]">
-                                          <img
-                                            src={artist.images?.[0]?.url}
-                                            alt={artist.name}
-                                            className="absolute inset-0 w-full h-full object-cover"
-                                          />
-                                        </div>
-
-                                        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
-                                          {artist.external_urls?.spotify ? (
-                                            <a
-                                              href={
-                                                artist.external_urls.spotify
-                                              }
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              aria-label={`View ${artist.name} on Spotify`}
-                                            >
-                                              <button className="h-11 w-11 rounded-full bg-[#1ed760] hover:bg-[#1fdf64] shadow-xl flex items-center justify-center">
-                                                <ExternalLink className="h-5 w-5 text-black" />
-                                              </button>
-                                            </a>
-                                          ) : (
-                                            <button
-                                              className="h-11 w-11 rounded-full bg-[#6b6b6b] cursor-not-allowed shadow-xl flex items-center justify-center"
-                                              disabled
-                                            >
-                                              <ExternalLink className="h-5 w-5 text-black" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="mt-auto">
-                                        <p className="font-semibold mb-1 truncate">
-                                          {artist.name}
-                                        </p>
-                                        <p className="text-sm text-[#a7a7a7]">
-                                          Artist
-                                        </p>
-                                      </div>
-                                    </div>
-                                ))}
-                            </div>
-                            </div>
-                          </div>
-                        </section>
-                      )}
-
-                      {topTracks.length > 0 && (
-                        <section className="mb-12">
-                          <div className="mb-6">
-                            <h2 className="text-2xl font-bold mb-1">
-                              Top tracks this month
-                            </h2>
-                            <p className="text-sm text-[#a7a7a7]">
-                              Only visible to you
-                            </p>
-                          </div>
-
-                          <div className="space-y-2">
-                            {topTracks
-                              .slice(0, 4)
-                              .map((track: any, index: number) => (
                                 <div
-                                  key={track.id || index}
+                                  ref={artistsScrollRef}
+                                  className="overflow-x-auto overflow-y-hidden pb-2 custom-scroll"
+                                  style={{
+                                    scrollbarWidth: "none",
+                                    msOverflowStyle: "none",
+                                  }}
                                 >
-                                  <a
-                                    href={track.external_urls?.spotify}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-4 p-2 rounded-lg hover:bg-[#282828] transition-colors group"
+                                  <div
+                                    className="flex gap-2"
+                                    style={{
+                                      width: "max-content",
+                                    }}
                                   >
-                                  <div className="flex items-center justify-center w-10 text-[#a7a7a7] group-hover:text-white">
-                                    <span className="group-hover:hidden">
-                                      {index + 1}
-                                    </span>
-                                    <Play className="hidden group-hover:block h-4 w-4" />
+                                    {topArtists
+                                      .slice(0, 6)
+                                      .map((artist: any, index: number) => (
+                                        <div
+                                          key={artist.id || index}
+                                          className="hover:bg-[#282828] rounded-xl transition-all cursor-pointer group flex flex-col shrink-0"
+                                          style={{
+                                            padding: "12px",
+                                            minHeight: "224px",
+                                            width: "180px",
+                                          }}
+                                        >
+                                          <div className="relative mb-4 shrink-0">
+                                            <div className="relative w-full pb-[100%] rounded-full overflow-hidden bg-[#282828]">
+                                              <img
+                                                src={artist.images?.[0]?.url}
+                                                alt={artist.name}
+                                                className="absolute inset-0 w-full h-full object-cover"
+                                              />
+                                            </div>
+
+                                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
+                                              {artist.external_urls?.spotify ? (
+                                                <a
+                                                  href={
+                                                    artist.external_urls.spotify
+                                                  }
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  aria-label={`View ${artist.name} on Spotify`}
+                                                >
+                                                  <button className="h-11 w-11 rounded-full bg-[#1ed760] hover:bg-[#1fdf64] shadow-xl flex items-center justify-center">
+                                                    <ExternalLink className="h-5 w-5 text-black" />
+                                                  </button>
+                                                </a>
+                                              ) : (
+                                                <button
+                                                  className="h-11 w-11 rounded-full bg-[#6b6b6b] cursor-not-allowed shadow-xl flex items-center justify-center"
+                                                  disabled
+                                                >
+                                                  <ExternalLink className="h-5 w-5 text-black" />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="mt-auto">
+                                            <p className="font-semibold mb-1 truncate">
+                                              {artist.name}
+                                            </p>
+                                            <p className="text-sm text-[#a7a7a7]">
+                                              Artist
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ))}
                                   </div>
-                                  <img
-                                    src={track.album?.images?.[0]?.url}
-                                    alt={track.name}
-                                    className="h-10 w-10 rounded"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium truncate">
-                                      {track.name}
-                                    </p>
-                                    <p className="text-sm text-[#a7a7a7] truncate">
-                                      {track.artists
-                                        ?.map((a: any) => a.name)
-                                        .join(", ")}
-                                    </p>
-                                  </div>
-                                  <div className="text-sm text-[#a7a7a7] hidden md:block">
-                                    {track.album?.name}
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <span className="text-sm text-[#a7a7a7]">
-                                      {Math.floor(track.duration_ms / 60000)}:
-                                      {String(
-                                        Math.floor(
-                                          (track.duration_ms % 60000) / 1000
-                                        )
-                                      ).padStart(2, "0")}
-                                    </span>
-                                  </div>
-                                </a>
                                 </div>
-                            ))}
-                          </div>
-                        </section>
-                      )}
+                              </div>
+                            </section>
+                          )}
+
+                          {topTracks.length > 0 && (
+                            <section className="mb-12">
+                              <div className="mb-6">
+                                <h2 className="text-2xl font-bold mb-1">
+                                  Top tracks this month
+                                </h2>
+                                <p className="text-sm text-[#a7a7a7]">
+                                  Only visible to you
+                                </p>
+                              </div>
+
+                              <div className="space-y-2">
+                                {topTracks
+                                  .slice(0, 4)
+                                  .map((track: any, index: number) => (
+                                    <div key={track.id || index}>
+                                      <a
+                                        href={track.external_urls?.spotify}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-4 p-2 rounded-lg hover:bg-[#282828] transition-colors group"
+                                      >
+                                        <div className="flex items-center justify-center w-10 text-[#a7a7a7] group-hover:text-white">
+                                          <span className="group-hover:hidden">
+                                            {index + 1}
+                                          </span>
+                                          <Play className="hidden group-hover:block h-4 w-4" />
+                                        </div>
+                                        <img
+                                          src={track.album?.images?.[0]?.url}
+                                          alt={track.name}
+                                          className="h-10 w-10 rounded"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium truncate">
+                                            {track.name}
+                                          </p>
+                                          <p className="text-sm text-[#a7a7a7] truncate">
+                                            {track.artists
+                                              ?.map((a: any) => a.name)
+                                              .join(", ")}
+                                          </p>
+                                        </div>
+                                        <div className="text-sm text-[#a7a7a7] hidden md:block">
+                                          {track.album?.name}
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                          <span className="text-sm text-[#a7a7a7]">
+                                            {Math.floor(
+                                              track.duration_ms / 60000
+                                            )}
+                                            :
+                                            {String(
+                                              Math.floor(
+                                                (track.duration_ms % 60000) /
+                                                  1000
+                                              )
+                                            ).padStart(2, "0")}
+                                          </span>
+                                        </div>
+                                      </a>
+                                    </div>
+                                  ))}
+                              </div>
+                            </section>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

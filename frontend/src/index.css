@@ -20,7 +20,6 @@
 }
 
 .custom-scroll {
-  background-color: aquamarine;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
