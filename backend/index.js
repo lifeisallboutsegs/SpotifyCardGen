@@ -50,8 +50,8 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app",
-    credentials: true,
+    origin: "*",
+    credentials: false,
   },
 });
 
@@ -213,16 +213,6 @@ async function getLyrics(lyricsUrl) {
 
   return { lyrics: lyricsText.trim() };
 }
-
-app.use(
-  cors({
-    origin: process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app",
-    credentials: true,
-  })
-);
-app.use(morgan("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
