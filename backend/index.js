@@ -63,6 +63,7 @@ const io = new Server(httpServer, {
     origin: "*",
     credentials: false,
   },
+  transports: ['polling'],
 });
 
 const PORT = process.env.PORT || 3000;
