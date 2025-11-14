@@ -39,9 +39,6 @@ export default function LoginPage() {
   const [showMiniHeader, setShowMiniHeader] = useState(false);
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const mainThumbRef = useRef<HTMLDivElement | null>(null);
-  const artistsScrollRef = useRef<HTMLDivElement | null>(null);
-  const artistsThumbRef = useRef<HTMLDivElement | null>(null);
-  const artistsWrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleSessionFromUrl = async () => {
@@ -93,29 +90,6 @@ export default function LoginPage() {
     thumbEl.style.top = top + "px";
   };
 
-  const updateHorizontalThumb = (
-    scrollEl: HTMLDivElement | null,
-    thumbEl: HTMLDivElement | null
-  ) => {
-    if (!scrollEl || !thumbEl) return;
-    const visible = scrollEl.clientWidth;
-    const total = scrollEl.scrollWidth;
-    if (total <= visible) {
-      thumbEl.classList.remove("scrollbar-visible");
-      return;
-    }
-    thumbEl.classList.add("scrollbar-visible");
-    const ratio = visible / total;
-    const thumbWidth = Math.max(24, Math.floor(visible * ratio));
-    const maxLeft = visible - thumbWidth;
-    const scrollRatio = scrollEl.scrollLeft / (total - visible);
-    const left = Math.round(scrollRatio * maxLeft);
-    thumbEl.style.width = thumbWidth + "px";
-    thumbEl.style.left = left + "px";
-    thumbEl.style.height = "4px";
-    thumbEl.style.top = "auto";
-    thumbEl.style.bottom = "0";
-  };
 
   useEffect(() => {
     const scrollEl = mainScrollRef.current;
@@ -137,72 +111,6 @@ export default function LoginPage() {
     }
   }, [user, topArtists, topTracks]);
 
-  useEffect(() => {
-    const scrollEl = artistsScrollRef.current;
-    const thumbEl = artistsThumbRef.current;
-    const wrapperEl = artistsWrapperRef.current;
-    if (scrollEl && thumbEl && wrapperEl) {
-      const onScroll = () => updateHorizontalThumb(scrollEl, thumbEl);
-      const onResize = () => updateHorizontalThumb(scrollEl, thumbEl);
-      scrollEl.addEventListener("scroll", onScroll);
-      window.addEventListener("resize", onResize);
-
-      const onWheel = (e: WheelEvent) => {
-        const target = e.target as Node;
-        if (wrapperEl.contains(target) || wrapperEl === target) {
-          if (e.deltaY !== 0 || e.deltaX !== 0) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
-            scrollEl.scrollLeft += scrollAmount;
-          }
-        }
-      };
-
-      wrapperEl.addEventListener("wheel", onWheel, {
-        passive: false,
-        capture: true,
-      });
-
-      let touchStartX = 0;
-      let touchStartY = 0;
-      let isScrolling = false;
-
-      const onTouchStart = (e: TouchEvent) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        isScrolling = false;
-      };
-
-      const onTouchMove = (e: TouchEvent) => {
-        if (!isScrolling) {
-          const touchCurrentX = e.touches[0].clientX;
-          const touchCurrentY = e.touches[0].clientY;
-          const diffX = Math.abs(touchCurrentX - touchStartX);
-          const diffY = Math.abs(touchCurrentY - touchStartY);
-
-          if (diffX > diffY) {
-            isScrolling = true;
-          }
-        }
-      };
-
-      scrollEl.addEventListener("touchstart", onTouchStart, { passive: true });
-      scrollEl.addEventListener("touchmove", onTouchMove, { passive: true });
-
-      updateHorizontalThumb(scrollEl, thumbEl);
-      return () => {
-        scrollEl.removeEventListener("scroll", onScroll);
-        window.removeEventListener("resize", onResize);
-        wrapperEl.removeEventListener("wheel", onWheel, {
-          capture: true,
-        } as any);
-        scrollEl.removeEventListener("touchstart", onTouchStart);
-        scrollEl.removeEventListener("touchmove", onTouchMove);
-      };
-    }
-  }, [topArtists]);
 
   useEffect(() => {
     const attachDrag = (
@@ -275,84 +183,9 @@ export default function LoginPage() {
       };
     };
 
-    const attachHorizontalDrag = (
-      scrollEl: HTMLDivElement | null,
-      thumbEl: HTMLDivElement | null
-    ) => {
-      if (!scrollEl || !thumbEl) return;
-      let dragging = false;
-      let startX = 0;
-      let startScroll = 0;
-
-      const onPointerDown = (e: MouseEvent | PointerEvent | TouchEvent) => {
-        e.preventDefault();
-        dragging = true;
-        thumbEl.classList.add("dragging");
-        if (e instanceof TouchEvent) {
-          startX = e.touches[0].clientX;
-        } else if ("clientX" in e) {
-          startX = (e as MouseEvent).clientX;
-        }
-        startScroll = scrollEl.scrollLeft;
-        document.addEventListener("pointermove", onPointerMove as any);
-        document.addEventListener("pointerup", onPointerUp as any);
-        document.addEventListener(
-          "touchmove",
-          onPointerMove as any,
-          { passive: false } as any
-        );
-        document.addEventListener("touchend", onPointerUp as any);
-      };
-
-      const onPointerMove = (ev: any) => {
-        if (!dragging) return;
-        ev.preventDefault();
-        const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-        const delta = clientX - startX;
-        const visible = scrollEl.clientWidth;
-        const total = scrollEl.scrollWidth;
-        const thumbWidth = parseFloat(
-          window.getComputedStyle(thumbEl).width || "32"
-        );
-        const maxThumbLeft = Math.max(1, visible - thumbWidth);
-        const scrollable = Math.max(1, total - visible);
-        const scrollDelta = (delta / maxThumbLeft) * scrollable;
-        scrollEl.scrollLeft = Math.min(
-          Math.max(0, startScroll + scrollDelta),
-          scrollable
-        );
-      };
-
-      const onPointerUp = () => {
-        dragging = false;
-        thumbEl.classList.remove("dragging");
-        document.removeEventListener("pointermove", onPointerMove as any);
-        document.removeEventListener("pointerup", onPointerUp as any);
-        document.removeEventListener("touchmove", onPointerMove as any);
-        document.removeEventListener("touchend", onPointerUp as any);
-      };
-
-      thumbEl.addEventListener("pointerdown", onPointerDown as any);
-      thumbEl.addEventListener(
-        "touchstart",
-        onPointerDown as any,
-        { passive: false } as any
-      );
-
-      return () => {
-        thumbEl.removeEventListener("pointerdown", onPointerDown as any);
-        thumbEl.removeEventListener("touchstart", onPointerDown as any);
-      };
-    };
-
     const mainCleanup = attachDrag(mainScrollRef.current, mainThumbRef.current);
-    const artistsCleanup = attachHorizontalDrag(
-      artistsScrollRef.current,
-      artistsThumbRef.current
-    );
     return () => {
       if (typeof mainCleanup === "function") mainCleanup();
-      if (typeof artistsCleanup === "function") artistsCleanup();
     };
   }, [user, topArtists, topTracks]);
 
@@ -541,18 +374,8 @@ export default function LoginPage() {
                                 </p>
                               </div>
 
-                              <div
-                                ref={artistsWrapperRef}
-                                className="custom-scroll-wrapper relative"
-                              >
-                                <div
-                                  ref={artistsScrollRef}
-                                  className="overflow-x-auto overflow-y-hidden pb-2 custom-scroll"
-                                  style={{
-                                    scrollbarWidth: "none",
-                                    msOverflowStyle: "none",
-                                  }}
-                                >
+                              <div className="relative">
+                                <div className="overflow-x-auto overflow-y-hidden pb-2">
                                   <div
                                     className="flex gap-2"
                                     style={{
