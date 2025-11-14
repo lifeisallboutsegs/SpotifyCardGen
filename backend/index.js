@@ -24,20 +24,30 @@ const sessionSchema = new mongoose.Schema({
 
 const Session = mongoose.model("Session", sessionSchema);
 
+let connectionPromise = null;
+
 async function connectToDatabase() {
   if (mongoose.connection.readyState >= 1) {
     return;
   }
 
+  if (connectionPromise) {
+    await connectionPromise;
+    return;
+  }
+
+  connectionPromise = mongoose.connect(process.env.MONGODB_URI, {
+    bufferCommands: false,
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+  });
+
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
+    await connectionPromise;
     console.log("Connected to MongoDB");
   } catch (err) {
+    connectionPromise = null;
     console.error("MongoDB connection error:", err);
     throw err;
   }
