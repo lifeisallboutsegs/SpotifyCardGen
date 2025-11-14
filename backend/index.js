@@ -9,14 +9,19 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import qs from "qs";
 import Database from "better-sqlite3";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:5173",
+    origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:3000",
     credentials: true,
   },
 });
@@ -47,6 +52,16 @@ const updateSession = db.prepare(`
   SET access_token = ?, refresh_token = ?, expires_at = ?
   WHERE session_id = ?
 `);
+
+// Serve static files from the public directory (frontend build)
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(morgan("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+  origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:3000",
+  credentials: true,
+}));
 
 async function search(songname) {
   const searchUrl = `https://api.genius.com/search?${qs.stringify({
