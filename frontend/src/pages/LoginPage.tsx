@@ -83,13 +83,21 @@ export default function LoginPage() {
       return;
     }
     thumbEl.classList.add("scrollbar-visible");
-    const ratio = visible / total;
-    const thumbHeight = Math.max(24, Math.floor(visible * ratio));
-    const maxTop = visible - thumbHeight;
-    const scrollRatio = scrollEl.scrollTop / (total - visible);
-    const top = Math.round(scrollRatio * maxTop);
+    const thumbHeight = 200; // Fixed height of 200px
+    
+    // Ensure thumb doesn't exceed visible area
+    const maxTop = Math.max(0, visible - thumbHeight);
+    const scrollable = total - visible;
+    
+    if (scrollable <= 0) {
+      thumbEl.style.top = "0px";
+    } else {
+      const scrollRatio = Math.min(1, Math.max(0, scrollEl.scrollTop / scrollable));
+      const top = Math.round(scrollRatio * maxTop);
+      thumbEl.style.top = top + "px";
+    }
+    
     thumbEl.style.height = thumbHeight + "px";
-    thumbEl.style.top = top + "px";
   };
 
   useEffect(() => {
@@ -523,7 +531,7 @@ export default function LoginPage() {
                                         <img
                                           src={track.album?.images?.[0]?.url}
                                           alt={track.name}
-                                          className="h-8 w-8 sm:h-10 sm:w-10 rounded flex-shrink-0"
+                                          className="h-8 w-8 sm:h-10 sm:w-10 rounded shrink-0"
                                         />
                                         <div className="flex-1 min-w-0">
                                           <p className="font-medium truncate text-sm sm:text-base text-foreground">

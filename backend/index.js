@@ -96,26 +96,38 @@ async function getLyrics(lyricsUrl) {
     $element.find('[style*="position:absolute"]').remove();
     $element.find('[tabindex="0"][style*="pointer-events:none"]').remove();
 
+    $element
+      .find(".ReferentFragment-desktop__Highlight-sc-96c7f1dd-1")
+      .each((i, frag) => {
+        const $frag = $(frag);
+
+        $frag.html($frag.html().replace(/<br\s*\/?>/gi, "\n"));
+      });
+
     let lyricsHtml = $element.html();
     if (lyricsHtml) {
       lyricsHtml = lyricsHtml.replace(/<br\s*\/?>/gi, "\n");
 
-      const lyricsSection = cheerio.load(lyricsHtml).text().trim();
+      const lyricsSection = cheerio.load(lyricsHtml).text();
 
-      const lines = lyricsSection.split("\n").filter((line) => {
-        const trimmedLine = line.trim();
+      const lines = lyricsSection
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line, index, array) => {
+          if (line.length === 0) return true;
 
-        return (
-          trimmedLine &&
-          !trimmedLine.match(/^\d+\s+Contributors?$/i) &&
-          !trimmedLine.match(/^.*Lyrics$/i) &&
-          !trimmedLine.match(/^Read More/i) &&
-          !trimmedLine.match(/^Translations$/i) &&
-          !trimmedLine.includes("is a melodic piece") &&
-          !trimmedLine.includes("collaboration between") &&
-          trimmedLine.length > 0
-        );
-      });
+          return !(
+            line.match(/^\d+\s+Contributors?$/i) ||
+            line.match(/^.*Lyrics$/i) ||
+            line.match(/^Read More/i) ||
+            line.match(/^Translations/i) ||
+            line.includes("is a melodic piece") ||
+            line.includes("collaboration between") ||
+            line.includes("See upcoming pop shows") ||
+            line.includes("Get tickets for your favorite artists") ||
+            line.includes("You might also like")
+          );
+        });
 
       if (lines.length > 0) {
         lyricsText += lines.join("\n") + "\n";
@@ -201,7 +213,8 @@ io.on("connection", (socket) => {
           duration: data.item?.duration_ms,
           track: {
             name: data.item?.name,
-            artists: data.item?.artists?.map((a) => a.name).join(", "),
+            artists: data.item?.artists?.map((a) => a.name)
+              .join(", "),
             album: data.item?.album?.name,
             image: data.item?.album?.images?.[0]?.url,
             uri: data.item?.uri,
@@ -259,7 +272,7 @@ io.on("connection", (socket) => {
       await updatePlayback();
     }
 
-    const apiInterval = setInterval(updatePlayback, 5000);
+    const apiInterval = setInterval(updatePlayback, 2000);
     const clientInterval = setInterval(sendUpdate, 1000);
 
     activeListeners.set(socket.id, { apiInterval, clientInterval });
@@ -466,65 +479,388 @@ app.get("/api/lyrics", async (req, res) => {
       return res.json(lyricsCache.get(cacheKey));
     }
 
-    let searchResults = await search(songname.split("-" || "by")[0].trim());
-    if (
-      artist &&
-      (!searchResults.results || searchResults.results.length === 0)
-    ) {
-      searchResults = await search(`${songname} by ${artist}`);
+    let cleanSongName = songname;
+    let cleanArtist = artist;
+
+    if (!artist && songname.toLowerCase().includes(" by ")) {
+      const parts = songname.split(" by ");
+      if (parts.length === 2) {
+        cleanSongName = parts[0].trim();
+        cleanArtist = parts[1].trim();
+      }
     }
 
-    if (!searchResults.results || searchResults.results.length === 0) {
-      return res.status(404).json({ error: "No songs found" });
+    let featuredArtist = null;
+
+    const featuredMatch = songname.match(/\((?:feat\.?|ft\.?)\s+([^)]+)\)/i);
+    if (featuredMatch) {
+      featuredArtist = featuredMatch[1].trim();
+
+      cleanSongName = songname
+        .replace(/\s*\((?:feat\.?|ft\.?)\s+([^)]+)\)/i, "")
+        .trim();
     }
 
-    const songnameLower = songname.toLowerCase().split("-" || "by")[0].trim();
-    const artistLower = artist ? artist.toLowerCase() : null;
-    let matchedResult = null;
-    for (const result of searchResults.results) {
-      
-      const titleLower = result.title.toLowerCase();
-      const resultArtistLower = result.artist.toLowerCase();
-      if (titleLower.includes(songnameLower)) {
-        if (!artist) {
-          matchedResult = result;
-          break;
-        } else {
-          if (
-            resultArtistLower.includes(artistLower) ||
-            titleLower.includes(artistLower)
-          ) {
-            matchedResult = result;
-            break;
-          }
+    if (!featuredArtist) {
+      const withMatch = songname.match(/\(with\s+([^)]+)\)/i);
+      if (withMatch) {
+        featuredArtist = withMatch[1].trim();
 
-          const artistWords = artistLower.split(/\s+/);
-          if (artistWords.length > 1) {
-            for (const word of artistWords) {
+        cleanSongName = songname.replace(/\s*\(with\s+([^)]+)\)/i, "").trim();
+      }
+    }
+
+    if (!featuredArtist) {
+      const ftMatch = songname.match(
+        /\s+(?:feat\.?|ft\.?)\s+([^-(\|]+?)(?:\s|$)/i
+      );
+      if (ftMatch) {
+        featuredArtist = ftMatch[1].trim();
+
+        cleanSongName = songname
+          .replace(/\s+(?:feat\.?|ft\.?)\s+[^-(\|]+?(?:\s|$)/i, " ")
+          .trim();
+      }
+    }
+
+    if (artist && songname.includes("(") && songname.includes(")")) {
+      const parentheticalContent = songname.match(/\(([^)]+)\)/g);
+      if (parentheticalContent) {
+        let shouldRemoveParentheses = false;
+
+        for (const parenContent of parentheticalContent) {
+          const cleanContent = parenContent.replace(/[()]/g, "").trim();
+
+          const artistPatterns = [/[,&]/, /\s+&\s+/, /^[\w\s&,.']+$/];
+
+          if (artistPatterns.some((pattern) => pattern.test(cleanContent))) {
+            const words = cleanContent.split(/[,&]/).map((w) => w.trim());
+            const artistWords = artist
+              .toLowerCase()
+              .split(/[,&]/)
+              .map((w) => w.trim());
+
+            let matchingWords = 0;
+            for (const word of words) {
               if (
-                resultArtistLower.includes(word) ||
-                titleLower.includes(word)
+                word.length > 2 &&
+                artistWords.some(
+                  (artistWord) =>
+                    artistWord.includes(word.toLowerCase()) ||
+                    word.toLowerCase().includes(artistWord)
+                )
               ) {
-                matchedResult = result;
-                break;
+                matchingWords++;
               }
             }
-            if (matchedResult) break;
+
+            if (matchingWords >= Math.min(2, words.length)) {
+              shouldRemoveParentheses = true;
+              break;
+            }
           }
+        }
+
+        if (shouldRemoveParentheses) {
+          cleanSongName = songname.replace(/\s*\([^)]+\)\s*/g, " ").trim();
         }
       }
     }
 
-    if (!matchedResult) {
+    if (songname.includes("-")) {
+      const parts = songname.split("-");
+      cleanSongName = parts[0].trim();
+    } else if (songname.includes("|")) {
+      const parts = songname.split("|");
+      cleanSongName = parts[0].trim();
+    }
+
+    if (!cleanArtist && featuredArtist) {
+      cleanArtist = featuredArtist;
+    }
+
+    console.log(
+      `Searching for: "${cleanSongName}" by "${cleanArtist || "unknown"}"`
+    );
+
+    const allResults = new Map();
+
+    try {
+      if (cleanArtist) {
+        const artistResults = await search(cleanArtist);
+        if (artistResults.results) {
+          artistResults.results.forEach((result) => {
+            allResults.set(result.url, result);
+          });
+        }
+      }
+
+      if (cleanArtist) {
+        const artistSongResults = await search(
+          `${cleanArtist} ${cleanSongName}`
+        );
+        if (artistSongResults.results) {
+          artistSongResults.results.forEach((result) => {
+            allResults.set(result.url, result);
+          });
+        }
+      }
+
+      if (cleanArtist) {
+        const songArtistResults = await search(
+          `${cleanSongName} ${cleanArtist}`
+        );
+        if (songArtistResults.results) {
+          songArtistResults.results.forEach((result) => {
+            allResults.set(result.url, result);
+          });
+        }
+      }
+
+      const songResults = await search(cleanSongName);
+      if (songResults.results) {
+        songResults.results.forEach((result) => {
+          allResults.set(result.url, result);
+        });
+      }
+    } catch (searchError) {
+      console.error("Error during multiple searches:", searchError);
+    }
+
+    const combinedResults = Array.from(allResults.values());
+
+    if (combinedResults.length === 0) {
+      return res.status(404).json({ error: "No songs found in any search" });
+    }
+
+    const songWords = cleanSongName
+      .toLowerCase()
+      .replace(/[-()]/g, " ")
+      .split(/\s+/)
+      .filter((word) => word.length > 0);
+    const artistWords = cleanArtist
+      ? cleanArtist
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((word) => word.length > 0)
+      : [];
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const result of combinedResults) {
+      const titleLower = result.title.toLowerCase();
+      const resultArtistLower = result.artist.toLowerCase();
+      let score = 0;
+
+      const translationPatterns = [
+        "traducción",
+        "traduccion",
+        "türkçe",
+        "русский",
+        "traduction",
+        "tradução",
+        "nederlandse",
+        "deutsche",
+        "תרגום",
+        "español",
+        "português",
+        "svensk översättning",
+        " traduction ",
+        " traduction",
+        "translation",
+        "traducción al",
+        "türkçe çeviri",
+        "ruskiy perevod",
+        "deutsche übersetzung",
+      ];
+
+      const isTranslation = translationPatterns.some(
+        (pattern) =>
+          titleLower.includes(pattern.toLowerCase()) ||
+          resultArtistLower.includes(pattern.toLowerCase())
+      );
+
+      let isFullCollaborationTranslation = false;
+      if (isTranslation && cleanArtist) {
+        const cleanArtistWords = cleanArtist
+          .toLowerCase()
+          .split(/[,&]|\s+ft\.?\s+|\s+feat\.?\s+|\s+with\s+/)
+          .map((word) => word.trim())
+          .filter((word) => word.length > 2);
+
+        const matchingArtists = cleanArtistWords.filter(
+          (artistWord) =>
+            titleLower.includes(artistWord) ||
+            resultArtistLower.includes(artistWord)
+        );
+
+        if (matchingArtists.length >= Math.min(2, cleanArtistWords.length)) {
+          isFullCollaborationTranslation = true;
+        }
+      }
+
+      const isFullCollaborationTranslationLegacy =
+        isTranslation &&
+        cleanArtist &&
+        titleLower.includes("metro boomin") &&
+        titleLower.includes("travis scott") &&
+        titleLower.includes("young thug");
+
+      const coverPatterns = [
+        "cover",
+        "remix",
+        "version",
+        "acoustic",
+        "live",
+        "karaoke",
+        "instrumental",
+        "tribute",
+        "feat.",
+        "ft.",
+        "with",
+      ];
+
+      const isCover = coverPatterns.some(
+        (pattern) =>
+          titleLower.includes(pattern) || resultArtistLower.includes(pattern)
+      );
+
+      const curatorPatterns = [
+        "playlist",
+        "mix",
+        "spotify",
+        "radio",
+        "top hits",
+        "best of",
+        "compilation",
+        "various artists",
+        "genius",
+      ];
+
+      const isCurator = curatorPatterns.some((pattern) =>
+        resultArtistLower.includes(pattern)
+      );
+
+      if (isTranslation) {
+        score -= 15;
+      }
+
+      if (
+        isFullCollaborationTranslation ||
+        isFullCollaborationTranslationLegacy
+      ) {
+        score -= 25;
+      }
+
+      if (isCover) {
+        score -= 8;
+      }
+
+      if (isCurator) {
+        score -= 15;
+      }
+
+      for (const songWord of songWords) {
+        if (titleLower.includes(songWord)) {
+          score += 3;
+        }
+      }
+
+      for (const artistWord of artistWords) {
+        if (titleLower.includes(artistWord)) {
+          score += 2;
+        }
+      }
+
+      if (
+        titleLower === cleanSongName.toLowerCase() &&
+        cleanArtist &&
+        resultArtistLower === cleanArtist.toLowerCase()
+      ) {
+        score += 15;
+      } else if (titleLower === cleanSongName.toLowerCase()) {
+        score += 8;
+      }
+
+      if (cleanArtist && resultArtistLower === cleanArtist.toLowerCase()) {
+        score += 8;
+      }
+
+      if (cleanArtist) {
+        const cleanArtistLower = cleanArtist.toLowerCase();
+        const primaryArtist = cleanArtistLower
+          .split(/[,&]|\s+ft\.?\s+|\s+feat\.?\s+/)[0]
+          .trim();
+        const featuredArtists = cleanArtistLower.match(
+          /[,&]|\s+ft\.?\s+|\s+feat\.?\s+/g
+        )
+          ? cleanArtistLower
+              .split(/[,&]|\s+ft\.?\s+|\s+feat\.?\s+/)
+              .slice(1)
+              .join(" ")
+              .trim()
+          : "";
+
+        if (
+          resultArtistLower.includes(primaryArtist) &&
+          primaryArtist.length > 2
+        ) {
+          score += 5;
+        }
+
+        if (featuredArtists) {
+          const featuredWords = featuredArtists.split(/\s+/);
+          for (const featWord of featuredWords) {
+            if (featWord.length > 2 && resultArtistLower.includes(featWord)) {
+              score += 2;
+            }
+          }
+        }
+
+        const originalArtistVariations = [
+          "charlie puth",
+          "selena gomez",
+          "charlie puth & selena gomez",
+        ];
+
+        for (const variation of originalArtistVariations) {
+          if (
+            cleanArtistLower.includes(variation.split(" ")[0]) &&
+            resultArtistLower.includes(variation.split(" ")[0])
+          ) {
+            score += 3;
+            break;
+          }
+        }
+      }
+
+      console.log(
+        `Score for "${result.title}" by "${result.artist}": ${score} ${
+          isTranslation ? "(TRANSLATION)" : ""
+        } ${isCover ? "(COVER)" : ""} ${isCurator ? "(CURATOR)" : ""}`
+      );
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = result;
+      }
+    }
+
+    if (!bestMatch) {
       return res.status(404).json({ error: "No matching song found" });
     }
 
-    const lyricsData = await getLyrics(matchedResult.url);
+    console.log(
+      `Best match: "${bestMatch.title}" by "${bestMatch.artist}" with score ${bestScore}`
+    );
+
+    const lyricsData = await getLyrics(bestMatch.url);
 
     const responseData = {
-      title: matchedResult.title,
-      artist: matchedResult.artist,
-      image: matchedResult.image,
+      title: bestMatch.title,
+      artist: bestMatch.artist,
+      image: bestMatch.image,
       lyrics: lyricsData.lyrics,
     };
 

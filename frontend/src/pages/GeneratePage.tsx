@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { io, type Socket } from "socket.io-client";
 import { useAppSelector } from "@/store/hooks";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Music,
   Play,
@@ -22,11 +22,15 @@ import {
 } from "@/lib/colorExtractor";
 
 const LyricsViewer = ({
-  lyrics = "",
+  lyrics = undefined,
+  artist = "",
+  trackName = "",
   accentColor = "#243b1d",
   currentLine = 0,
 }: {
   lyrics?: string;
+  artist?: string;
+  trackName?: string;
   accentColor?: string;
   currentLine?: number;
 }) => {
@@ -47,13 +51,23 @@ const LyricsViewer = ({
       return;
     }
     thumbEl.classList.add("scrollbar-visible");
-    const ratio = visible / total;
-    const thumbHeight = Math.max(24, Math.floor(visible * ratio));
-    const maxTop = visible - thumbHeight;
-    const scrollRatio = scrollEl.scrollTop / (total - visible);
-    const top = Math.round(scrollRatio * maxTop);
+    const thumbHeight = 200;
+
+    const maxTop = Math.max(0, visible - thumbHeight);
+    const scrollable = total - visible;
+
+    if (scrollable <= 0) {
+      thumbEl.style.top = "0px";
+    } else {
+      const scrollRatio = Math.min(
+        1,
+        Math.max(0, scrollEl.scrollTop / scrollable)
+      );
+      const top = Math.round(scrollRatio * maxTop);
+      thumbEl.style.top = top + "px";
+    }
+
     thumbEl.style.height = thumbHeight + "px";
-    thumbEl.style.top = top + "px";
   };
 
   const attachLyricsDrag = (
@@ -89,11 +103,11 @@ const LyricsViewer = ({
       if (!dragging) return;
       ev.preventDefault();
       const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+
       const delta = clientY - startY;
       const visible = scrollEl.clientHeight;
       const total = scrollEl.scrollHeight;
-      const ratio = visible / total;
-      const thumbHeight = Math.max(24, Math.floor(visible * ratio));
+      const thumbHeight = 200;
       const maxThumbTop = Math.max(1, visible - thumbHeight);
       const scrollable = Math.max(1, total - visible);
       const scrollDelta = (delta / maxThumbTop) * scrollable;
@@ -157,24 +171,21 @@ const LyricsViewer = ({
     };
   }, []);
 
-  const defaultLyricsText = [
-    `
-    
-    Looks like you have to guess the lyrics for this song.
-    
-    `,
-    `
-    
-    Hmm. We don't know the lyrics for this one.
-    
-    `,
-    `
-    
-    You caught us, we're still working on getting lyrics for this one.
-    
-    `,
-    "",
-  ][Math.floor(Math.random() * 4)];
+  const defaultLyricsText = useMemo(() => {
+    const fallbackMessages = [
+      "Looks like you have to guess the lyrics for this song.",
+      "Hmm. We don't know the lyrics for this one.",
+      "You caught us, we're still working on getting lyrics for this one.",
+    ];
+
+    const seed = (trackName + artist).split("").reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+
+    const index = Math.abs(seed) % fallbackMessages.length;
+    return fallbackMessages[index];
+  }, [trackName, artist]);
 
   const lyricsText = lyrics || defaultLyricsText;
   const linesArray = lyricsText.split("\n");
@@ -224,22 +235,28 @@ const LyricsViewer = ({
 
   const getLineClasses = (text: string, index: number): string => {
     const isEmpty = text.trim() === "";
+    const fallbackLyrics =
+      lyrics === undefined && defaultLyricsText && text.trim();
     const baseClasses =
       "py-1 px-8 transition-all duration-300 text-center leading-relaxed select-none";
+
+    if (fallbackLyrics) {
+      return `${baseClasses} text-[#bad5b1] text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold opacity-40 flex justify-center items-center min-h-[200px]`;
+    }
 
     if (isEmpty) {
       return `${baseClasses} opacity-0 pointer-events-none`;
     }
 
     if (index === activeLineIndex) {
-      return `${baseClasses} text-white text-5xl font-extrabold opacity-100`;
+      return `${baseClasses} text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold opacity-100`;
     }
 
     if (index < activeLineIndex) {
-      return `${baseClasses} text-white/70 text-5xl font-extrabold opacity-50 cursor-pointer hover:opacity-70`;
+      return `${baseClasses} text-white/70 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold opacity-50 cursor-pointer hover:opacity-70`;
     }
 
-    return `${baseClasses} text-[#bad5b1] text-5xl font-extrabold opacity-40 cursor-pointer hover:opacity-60`;
+    return `${baseClasses} text-[#bad5b1] text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold opacity-40 cursor-pointer hover:opacity-60`;
   };
 
   const gradientColor1 = adjustSaturation(accentColor, 0.3);
@@ -288,23 +305,29 @@ const LyricsViewer = ({
             msOverflowStyle: "none",
           }}
         >
-          <div className="py-5 px-3 min-h-full">
-            {linesArray.map((line, index) => (
-              <div
-                key={index}
-                ref={(el) => {
-                  lineRefs.current[index] = el;
-                }}
-                className={getLineClasses(line, index)}
-                onClick={() => {
-                  if (line.trim() !== "") {
-                    setActiveLineIndex(index);
-                  }
-                }}
-              >
-                {line || "\u00A0"}
+          <div className="py-5 px-3 min-h-full flex flex-col items-center justify-center">
+            {lyrics ? (
+              linesArray.map((line, index) => (
+                <div
+                  key={index}
+                  ref={(el) => {
+                    lineRefs.current[index] = el;
+                  }}
+                  className={getLineClasses(line, index)}
+                  onClick={() => {
+                    if (line.trim() !== "") {
+                      setActiveLineIndex(index);
+                    }
+                  }}
+                >
+                  {line || "\u00A0"}
+                </div>
+              ))
+            ) : (
+              <div className="text-[#bad5b1] text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold opacity-40 text-center">
+                {defaultLyricsText}
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -412,13 +435,17 @@ export default function GeneratePage() {
         });
 
         if (response.data.recentlyPlayed) {
-          setRecentlyPlayed(response.data.recentlyPlayed.slice(0, 6));
+          const recentTracks =
+            response.data.recentlyPlayed.items?.map(
+              (item: any) => item.track
+            ) || [];
+          setRecentlyPlayed(recentTracks.slice(0, 6));
         }
         if (response.data.topArtists) {
-          setTopArtists(response.data.topArtists.slice(0, 6));
+          setTopArtists(response.data.topArtists.items?.slice(0, 6) || []);
         }
         if (response.data.topTracks) {
-          setTopTracks(response.data.topTracks.slice(0, 5));
+          setTopTracks(response.data.topTracks.items?.slice(0, 14) || []);
         }
       } catch (err) {
         console.error("Error fetching user data:", err);
@@ -459,21 +486,22 @@ export default function GeneratePage() {
   }, []);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || socket) return;
 
     const newSocket = io(API_BASE_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
+      transports: ["websocket", "polling"],
     });
 
-    newSocket.on("connect", () => {
-      console.log("Connected to WebSocket");
+    const handleConnect = () => {
+      console.log("Connected to WebSocket:", newSocket.id);
       newSocket.emit("start-playback-sync", { session });
-    });
+    };
 
-    newSocket.on("playback-update", (data: PlaybackUpdate) => {
+    const handlePlaybackUpdate = (data: PlaybackUpdate) => {
       playbackRef.current = data;
       setPlayback(data);
       setSmoothProgress(data.progress || 0);
@@ -482,6 +510,8 @@ export default function GeneratePage() {
 
       if (data.track && data.track.uri !== currentTrackUriRef.current) {
         currentTrackUriRef.current = data.track.uri;
+
+        setLyrics(null);
         fetchLyrics(data.track.artists, data.track.name);
         if (data.track.image) {
           extractAverageColor(data.track.image).then((rgb) => {
@@ -493,37 +523,46 @@ export default function GeneratePage() {
           });
         }
       }
-    });
+    };
 
-    newSocket.on("error", (err: { message: string; needsReauth?: boolean }) => {
+    const handleError = (err: { message: string; needsReauth?: boolean }) => {
       console.error("Socket error:", err.message);
       if (err.needsReauth) {
         navigate({ to: "/" });
       }
       setError(err.message);
-    });
+    };
 
-    newSocket.on("disconnect", () => {
+    const handleDisconnect = () => {
       console.log("Disconnected from WebSocket");
-    });
+    };
+
+    const handleConnectError = (err: Error) => {
+      console.error("Socket connection error:", err);
+      setError(`Connection failed: ${err.message}`);
+    };
+
+    newSocket.on("connect", handleConnect);
+    newSocket.on("playback-update", handlePlaybackUpdate);
+    newSocket.on("error", handleError);
+    newSocket.on("disconnect", handleDisconnect);
+    newSocket.on("connect_error", handleConnectError);
 
     setSocket(newSocket);
 
     return () => {
+      newSocket.off("connect", handleConnect);
+      newSocket.off("playback-update", handlePlaybackUpdate);
+      newSocket.off("error", handleError);
+      newSocket.off("disconnect", handleDisconnect);
+      newSocket.off("connect_error", handleConnectError);
+
       if (newSocket.connected) {
         newSocket.emit("stop-playback-sync");
-        newSocket.disconnect();
       }
+      newSocket.disconnect();
     };
   }, [session, navigate]);
-
-  const handleBackToLogin = () => {
-    if (socket?.connected) {
-      socket.emit("stop-playback-sync");
-      socket.disconnect();
-    }
-    navigate({ to: "/" });
-  };
 
   const formatTime = (ms: number | undefined): string => {
     if (!ms) return "0:00";
@@ -534,34 +573,105 @@ export default function GeneratePage() {
   };
 
   const spotifyURIToURL = (uri: string): string => {
-    return uri
-      .replace("spotify:", "https://open.spotify.com/")
-      .replace(/:/g, "/");
+    if (!uri || typeof uri !== "string") {
+      console.warn("Invalid URI provided:", uri);
+      return "https://open.spotify.com";
+    }
+
+    let url = uri;
+
+    if (url.startsWith("spotify:")) {
+      url = url.substring(8);
+    } else if (url.startsWith("https://open.spotify.com/")) {
+      return url;
+    }
+
+    const parts = url.split(":");
+    if (parts.length >= 2) {
+      const type = parts[0];
+      const id = parts[1];
+      url = `https://open.spotify.com/${type}/${id}`;
+    } else {
+      url = `https://open.spotify.com/track/${url}`;
+    }
+
+    try {
+      const validatedUrl = new URL(url);
+      console.log("Generated Spotify URL:", validatedUrl.toString());
+      return validatedUrl.toString();
+    } catch (error) {
+      console.error("Invalid Spotify URL generated:", url, error);
+      return "https://open.spotify.com";
+    }
   };
 
   const handleOpenSpotify = (uri: string) => {
-    window.open(spotifyURIToURL(uri), "_blank");
+    console.log("Opening Spotify with URI:", uri);
+    const spotifyUrl = spotifyURIToURL(uri);
+    console.log("Generated URL:", spotifyUrl);
+
+    if (!spotifyUrl.startsWith("http")) {
+      console.error("Generated URL is not absolute:", spotifyUrl);
+      return;
+    }
+
+    try {
+      const url = new URL(spotifyUrl);
+      const finalUrl = url.toString();
+      console.log("Final URL to open:", finalUrl);
+
+      const newWindow = window.open(finalUrl, "_blank", "noopener,noreferrer");
+
+      if (!newWindow) {
+        console.error("Failed to open window. Popup blocker might be enabled.");
+      }
+    } catch (error) {
+      console.error("Error opening Spotify URL:", error);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
+    <div
+      className={`min-h-screen ${
+        theme === "light" ? "bg-gray-50" : "bg-background"
+      } text-foreground py-10 md:p-8`}
+    >
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
+        <div className="mb-8 p-5">
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-4xl md:text-5xl font-black text-foreground">
               Your Music
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Currently playing from Spotify
-            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate({ to: "/" })}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  theme === "light"
+                    ? "bg-gray-300 hover:bg-gray-400 text-gray-600 hover:text-gray-800"
+                    : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                }`}
+                title="Home"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                  />
+                </svg>
+              </button>
+              <ThemeToggle />
+            </div>
           </div>
-          <Button
-            onClick={handleBackToLogin}
-            size="sm"
-            className="bg-muted text-muted-foreground border border-border hover:bg-accent"
-          >
-            Back
-          </Button>
+          <p className="text-sm text-muted-foreground mt-1">
+            Currently playing from Spotify
+          </p>
         </div>
 
         {error && (
@@ -580,252 +690,348 @@ export default function GeneratePage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              {playback?.track ? (
-                <div className="bg-card rounded-2xl p-8 space-y-6 shadow-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                        ► NOW PLAYING
-                      </p>
-                      <h2 className="text-3xl md:text-5xl font-black text-foreground leading-tight">
-                        {playback.track.name}
-                      </h2>
-                      <p className="text-lg text-muted-foreground">
-                        {playback.track.artists}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {playback.track.album}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {playback.isPlaying ? (
-                        <Pause className="h-8 w-8 text-foreground" />
-                      ) : (
-                        <Play className="h-8 w-8 text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
+          <div
+            className={`${
+              theme === "light" ? "bg-white shadow-xl" : "bg-card"
+            } rounded-2xl shadow-lg overflow-hidden`}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
+              <div className="lg:col-span-2 space-y-0">
+                <div
+                  className={`p-6 lg:p-8 border-b ${
+                    theme === "light" ? "border-gray-200" : "border-border"
+                  }`}
+                >
+                  {playback?.track ? (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                          ► NOW PLAYING
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-4">
+                            {playback.isPlaying ? (
+                              <Pause className="h-10 w-10 text-foreground" />
+                            ) : (
+                              <Play className="h-10 w-10 text-muted-foreground" />
+                            )}
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleOpenSpotify(playback.track?.uri || "")
+                            }
+                            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+                            style={{ backgroundColor: accentColor }}
+                            title="Open in Spotify"
+                          >
+                            <ExternalLink className="h-3 w-3 text-white" />
+                          </button>
+                        </div>
+                      </div>
 
-                  {playback.track.image && (
-                    <div className="flex justify-center">
-                      <div
-                        className="relative cursor-pointer group"
-                        onClick={() =>
-                          handleOpenSpotify(playback.track?.uri || "")
-                        }
-                      >
-                        <img
-                          src={playback.track.image}
-                          alt={playback.track.name}
-                          className="w-64 h-64 rounded-2xl shadow-2xl object-cover transition-transform group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <ExternalLink className="h-10 w-10 text-white" />
+                      <div className="flex flex-col lg:flex-row items-center gap-8">
+                        <div className="shrink-0">
+                          <img
+                            src={playback.track.image}
+                            alt={playback.track.name}
+                            className="w-90 h-90 md:w-90 md:h-90 rounded-2xl shadow-2xl object-cover"
+                          />
+                        </div>
+
+                        <div className="flex-1 text-center lg:text-left space-y-4">
+                          <div className="space-y-3">
+                            <h2 className="text-2xl md:text-3xl font-black text-foreground leading-tight">
+                              {playback.track.name}
+                            </h2>
+                            <p className="text-lg md:text-xl font-semibold text-muted-foreground">
+                              {playback.track.artists}
+                            </p>
+                            <div className="flex justify-center lg:justify-start">
+                              {playback.track.album.length > 40 ? (
+                                <div className="relative overflow-hidden rounded-full" style={{ backgroundColor: accentColor, maxWidth: '364px' }}>
+                                  <div className="px-3 py-1">
+                                    <div className="whitespace-nowrap text-xs font-medium text-white">
+                                      <div className="animate-marquee-container">
+                                        {playback.track.album} &nbsp;&nbsp; {playback.track.album}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white"
+                                  style={{ backgroundColor: accentColor }}
+                                  title={playback.track.album}
+                                >
+                                  {playback.track.album.length > 30 ? (
+                                    <span className="truncate" style={{ maxWidth: '364px' }}>
+                                      {playback.track.album}
+                                    </span>
+                                  ) : (
+                                    playback.track.album
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {playback.progress !== undefined &&
+                            playback.duration && (
+                              <div className="space-y-2 max-w-md mx-auto lg:mx-0">
+                                <div className="flex items-center gap-5 md:hidden">
+                                  <span className="text-xs text-muted-foreground font-semibold w-6 text-right">
+                                    {formatTime(smoothProgress)}
+                                  </span>
+                                  <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden min-w-65">
+                                    <div
+                                      className="h-3 rounded-full transition-all"
+                                      style={{
+                                        width: `${
+                                          (smoothProgress / playback.duration) *
+                                          100
+                                        }%`,
+                                        backgroundColor: accentColor,
+                                        willChange: "width",
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-muted-foreground font-semibold w-6">
+                                    {formatTime(playback.duration)}
+                                  </span>
+                                </div>
+
+                                <div className="hidden md:block max-w-md">
+                                  <div className="w-full bg-muted rounded-full h-4 overflow-hidden">
+                                    <div
+                                      className="h-4 rounded-full transition-all"
+                                      style={{
+                                        width: `${
+                                          (smoothProgress / playback.duration) *
+                                          100
+                                        }%`,
+                                        backgroundColor: accentColor,
+                                        willChange: "width",
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex justify-between text-xs text-muted-foreground font-semibold mt-2">
+                                    <span>{formatTime(smoothProgress)}</span>
+                                    <span>{formatTime(playback.duration)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
+                  ) : (
+                    <div className="text-center space-y-3">
+                      <Music className="h-12 w-12 text-muted-foreground mx-auto" />
+                      <p className="text-muted-foreground">
+                        No track currently playing
+                      </p>
+                    </div>
                   )}
+                </div>
 
-                  {playback.progress !== undefined && playback.duration && (
-                    <div className="space-y-3">
-                      <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
+                <div
+                  className={`p-6 lg:p-8 border-b ${
+                    theme === "light" ? "border-gray-200" : "border-border"
+                  }`}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-2">
+                      <Music
+                        className="h-5 w-5"
+                        style={{ color: accentTextColor }}
+                      />
+                      <h3
+                        className="text-xl font-bold"
+                        style={{ color: accentTextColor }}
+                      >
+                        LYRICS
+                      </h3>
+                    </div>
+                    <LyricsViewer
+                      lyrics={lyrics || undefined}
+                      artist={playback?.track?.artists || ""}
+                      trackName={playback?.track?.name || ""}
+                      accentColor={accentColor}
+                      currentLine={0}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-6 lg:p-8">
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center">
+                        <Clock className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">
+                          Recently Played
+                        </h3>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Your latest listening history
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {recentlyPlayed.map((track) => (
                         <div
-                          className="h-1 rounded-full transition-all"
-                          style={{
-                            width: `${
-                              (smoothProgress / playback.duration) * 100
-                            }%`,
-                            backgroundColor: accentColor,
-                            willChange: "width",
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground font-semibold">
-                        <span>{formatTime(smoothProgress)}</span>
-                        <span>{formatTime(playback.duration)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => handleOpenSpotify(playback.track?.uri || "")}
-                    className="w-full font-bold py-3 rounded-full transition-all text-white hover:opacity-90"
-                    style={{
-                      backgroundColor: accentColor,
-                    }}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <ExternalLink className="h-4 w-4" />
-                      Open in Spotify
-                    </div>
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-card rounded-2xl p-8 text-center space-y-3 shadow-lg">
-                  <Music className="h-12 w-12 text-muted-foreground mx-auto" />
-                  <p className="text-muted-foreground">
-                    No track currently playing
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 px-4">
-                  <Music
-                    className="h-5 w-5"
-                    style={{ color: accentTextColor }}
-                  />
-                  <h3
-                    className="text-xl font-bold"
-                    style={{ color: accentTextColor }}
-                  >
-                    LYRICS
-                  </h3>
-                </div>
-
-                <LyricsViewer
-                  lyrics={lyrics || undefined}
-                  accentColor={accentColor}
-                  currentLine={0}
-                />
-              </div>
-
-              <div className="bg-card rounded-2xl p-8 space-y-6 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-foreground" />
-                  <h3 className="text-xl font-bold text-foreground uppercase tracking-widest">
-                    Recently Played
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {recentlyPlayed.map((track) => (
-                    <div
-                      key={track.id}
-                      className={`group cursor-pointer rounded-xl p-4 transition-all space-y-3 ${
-                        theme === "light"
-                          ? "bg-gray-50 hover:bg-gray-200 hover:shadow-md"
-                          : "bg-muted hover:bg-muted/80"
-                      }`}
-                      onClick={() => handleOpenSpotify(track.uri)}
-                    >
-                      {track.album.images[0] && (
-                        <div className="relative">
-                          <img
-                            src={track.album.images[0].url}
-                            alt={track.name}
-                            className="w-full aspect-square object-cover rounded-lg group-hover:opacity-80 transition-opacity"
-                          />
-                          <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 rounded-lg transition-opacity flex items-center justify-center">
-                            <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100" />
+                          key={track.id}
+                          className={`group cursor-pointer rounded-lg p-3 transition-all duration-200 ${
+                            theme === "light"
+                              ? "hover:bg-gray-50 border border-transparent hover:border-gray-200"
+                              : "hover:bg-muted/50"
+                          }`}
+                          onClick={() => handleOpenSpotify(track.uri)}
+                        >
+                          {track.album.images[0] && (
+                            <div className="relative mb-2">
+                              <img
+                                src={track.album.images[0].url}
+                                alt={track.name}
+                                className="w-full aspect-square object-cover rounded shadow-sm"
+                              />
+                            </div>
+                          )}
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
+                              {track.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-normal truncate">
+                              {track.artists[0]?.name}
+                            </p>
                           </div>
                         </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate">
-                          {track.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {track.artists[0]?.name}
-                        </p>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <div className="bg-card rounded-2xl p-8 space-y-6 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-foreground" />
-                  <h3 className="text-xl font-bold text-foreground uppercase tracking-widest">
-                    Top Artists
-                  </h3>
-                </div>
-
-                <div className="space-y-3">
-                  {topArtists.map((artist) => (
-                    <div
-                      key={artist.id}
-                      className={`group cursor-pointer flex items-center gap-3 p-3 rounded-xl transition-all ${
-                        theme === "light"
-                          ? "bg-gray-50 hover:bg-gray-200 hover:shadow-sm"
-                          : "bg-muted hover:bg-muted/80"
-                      }`}
-                      onClick={() => handleOpenSpotify(artist.uri)}
-                    >
-                      {artist.images[0] && (
-                        <img
-                          src={artist.images[0].url}
-                          alt={artist.name}
-                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate">
-                          {artist.name}
-                        </p>
-                      </div>
-                      <ExternalLink
-                        className={`h-4 w-4 transition-colors flex-shrink-0 ${
-                          theme === "light"
-                            ? "text-gray-500 group-hover:text-gray-700"
-                            : "text-muted-foreground group-hover:text-foreground"
-                        }`}
-                      />
-                    </div>
-                  ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-card rounded-2xl p-8 space-y-6 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <Disc3 className="h-5 w-5 text-foreground" />
-                  <h3 className="text-xl font-bold text-foreground uppercase tracking-widest">
-                    Top Tracks
-                  </h3>
-                </div>
-
-                <div className="space-y-2">
-                  {topTracks.map((track, index) => (
-                    <div
-                      key={track.id}
-                      className={`group cursor-pointer flex items-center gap-3 p-3 rounded-lg transition-all ${
-                        theme === "light"
-                          ? "bg-gray-50 hover:bg-gray-200 hover:shadow-sm"
-                          : "bg-muted hover:bg-muted/80"
-                      }`}
-                      onClick={() => handleOpenSpotify(track.uri)}
-                    >
-                      <span
-                        className={`text-xs font-black w-5 text-center ${
-                          theme === "light"
-                            ? "text-gray-500"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate">
-                          {track.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {track.artists[0]?.name}
+              <div
+                className={`${
+                  theme === "light"
+                    ? "bg-gray-50 border-l border-gray-200"
+                    : "bg-card border-l border-border"
+                }`}
+              >
+                <div
+                  className={`p-6 lg:p-8 border-b ${
+                    theme === "light" ? "border-gray-200" : "border-border"
+                  }`}
+                >
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center">
+                        <Users className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">
+                          Top Artists
+                        </h3>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Your most listened to artists
                         </p>
                       </div>
-                      <ExternalLink
-                        className={`h-4 w-4 transition-colors flex-shrink-0 ${
-                          theme === "light"
-                            ? "text-gray-500 group-hover:text-gray-700"
-                            : "text-muted-foreground group-hover:text-foreground"
-                        }`}
-                      />
                     </div>
-                  ))}
+
+                    <div className="space-y-1">
+                      {topArtists.map((artist, index) => (
+                        <div
+                          key={artist.id}
+                          className={`group cursor-pointer flex items-center gap-4 p-3 rounded-lg transition-all duration-200 ${
+                            theme === "light"
+                              ? "hover:bg-gray-100 border border-transparent hover:border-gray-200"
+                              : "hover:bg-muted/50"
+                          }`}
+                          onClick={() => handleOpenSpotify(artist.uri)}
+                        >
+                          <div className="w-8 text-center">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                          </div>
+                          <div className="relative shrink-0">
+                            {artist.images[0] && (
+                              <img
+                                src={artist.images[0].url}
+                                alt={artist.name}
+                                className="w-12 h-12 rounded-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate leading-tight">
+                              {artist.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-normal">
+                              Artist
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 lg:p-8">
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center">
+                        <Disc3 className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">
+                          Top Tracks
+                        </h3>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Your most played songs
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      {topTracks.map((track, index) => (
+                        <div
+                          key={track.id}
+                          className={`group cursor-pointer flex items-center gap-4 p-3 rounded-lg transition-all duration-200 ${
+                            theme === "light"
+                              ? "hover:bg-gray-100 border border-transparent hover:border-gray-200"
+                              : "hover:bg-muted/50"
+                          }`}
+                          onClick={() => handleOpenSpotify(track.uri)}
+                        >
+                          <div className="w-8 text-center">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                          </div>
+                          <div className="relative shrink-0">
+                            {track.album.images[0] && (
+                              <img
+                                src={track.album.images[0].url}
+                                alt={track.name}
+                                className="w-12 h-12 rounded object-cover"
+                              />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate leading-tight">
+                              {track.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-normal truncate">
+                              {track.artists[0]?.name}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
