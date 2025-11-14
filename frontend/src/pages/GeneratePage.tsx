@@ -103,7 +103,6 @@ const LyricsViewer = ({
       );
       scrollEl.scrollTop = newScrollTop;
 
-      // Update thumb position immediately for smooth dragging
       const scrollRatio = newScrollTop / scrollable;
       const top = Math.round(scrollRatio * maxThumbTop);
       thumbEl.style.top = top + "px";
@@ -277,7 +276,7 @@ Looks like you have to guess the lyrics for this song.\n
             msOverflowStyle: "none",
           }}
         >
-          <div className="py-5 min-h-full">
+          <div className="py-5 px-3 min-h-full">
             {linesArray.map((line, index) => (
               <div
                 key={index}
@@ -357,6 +356,8 @@ export default function GeneratePage() {
   const [loading, setLoading] = useState(true);
   const [accentColor, setAccentColor] = useState<string>("#1DB954");
   const [accentTextColor, setAccentTextColor] = useState<string>("#ffffff");
+  const currentTrackUriRef = useRef<string | null>(null);
+  const dataFetchedRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
   const playbackRef = useRef<PlaybackUpdate | null>(null);
@@ -370,11 +371,12 @@ export default function GeneratePage() {
 
   const fetchLyrics = async (artist: string, track: string) => {
     try {
-      const response = await axios.get(
-        `https://api.lyrics.ovh/v1/${encodeURIComponent(
-          artist
-        )}/${encodeURIComponent(track)}`
-      );
+      const response = await axios.get(`${API_BASE_URL}/api/lyrics`, {
+        params: {
+          songname: track,
+          artist: artist,
+        },
+      });
       if (response.data.lyrics) {
         setLyrics(response.data.lyrics);
       } else {
@@ -388,6 +390,9 @@ export default function GeneratePage() {
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (dataFetchedRef.current) return;
+      dataFetchedRef.current = true;
+
       try {
         setLoading(true);
         const response = await axios.get(`${API_BASE_URL}/api/data`, {
@@ -410,7 +415,7 @@ export default function GeneratePage() {
       }
     };
 
-    if (session) {
+    if (session && !dataFetchedRef.current) {
       fetchUserData();
     }
   }, [session]);
@@ -463,7 +468,8 @@ export default function GeneratePage() {
       lastUpdateRef.current = Date.now();
       setError(null);
 
-      if (data.track) {
+      if (data.track && data.track.uri !== currentTrackUriRef.current) {
+        currentTrackUriRef.current = data.track.uri;
         fetchLyrics(data.track.artists, data.track.name);
         if (data.track.image) {
           extractAverageColor(data.track.image).then((rgb) => {

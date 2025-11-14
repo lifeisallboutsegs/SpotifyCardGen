@@ -35,16 +35,13 @@
   position: absolute;
   right: 0px;
   width: 14px;
-  background-color: #6b6b6b;
+  background-color: var(--foreground);
   border-radius: 0;
   top: 0;
   height: 40vh;
   z-index: 50;
   opacity: 0;
   transition: opacity 160ms linear, background-color 120ms linear;
-}
-.custom-scrollbar-thumb:hover {
-  background-color: #7f7f7f;
 }
 
 .custom-scroll-wrapper {

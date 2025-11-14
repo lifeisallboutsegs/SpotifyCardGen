@@ -8,8 +8,9 @@ export async function extractAverageColor(
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = 1;
-        canvas.height = 1;
+        const size = 20; 
+        canvas.width = size;
+        canvas.height = size;
         const ctx = canvas.getContext("2d");
 
         if (!ctx) {
@@ -17,15 +18,33 @@ export async function extractAverageColor(
           return;
         }
 
-        ctx.drawImage(img, 0, 0, 1, 1);
-        const imageData = ctx.getImageData(0, 0, 1, 1);
-        const [r, g, b] = [
-          imageData.data[0],
-          imageData.data[1],
-          imageData.data[2],
-        ];
+        ctx.drawImage(img, 0, 0, size, size);
+        const imageData = ctx.getImageData(0, 0, size, size);
+        const data = imageData.data;
 
-        resolve({ r, g, b });
+        const colorCount = new Map<string, { count: number; r: number; g: number; b: number }>();
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const key = `${r}-${g}-${b}`;
+
+          if (colorCount.has(key)) {
+            colorCount.get(key)!.count++;
+          } else {
+            colorCount.set(key, { count: 1, r, g, b });
+          }
+        }
+
+        let mostFrequent = { count: 0, r: 139, g: 139, b: 139 };
+        for (const [, value] of colorCount) {
+          if (value.count > mostFrequent.count) {
+            mostFrequent = value;
+          }
+        }
+
+        resolve({ r: mostFrequent.r, g: mostFrequent.g, b: mostFrequent.b });
       } catch {
         resolve({ r: 139, g: 139, b: 139 });
       }
@@ -103,7 +122,7 @@ export function getVibrantColor(rgb: { r: number; g: number; b: number }) {
   const { h, s, l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
 
   const vibriantSaturation = Math.min(s * 1.3, 1);
-  const adjustedLightness = Math.max(0.45, Math.min(l * 1.1, 0.6));
+  const adjustedLightness = Math.max(0.15, Math.min(l * 0.6, 0.35));
 
   return hslToRgb(h, vibriantSaturation, adjustedLightness);
 }

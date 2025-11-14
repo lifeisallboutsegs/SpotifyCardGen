@@ -6,6 +6,8 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import querystring from "querystring";
 import axios from "axios";
+import * as cheerio from "cheerio";
+import qs from "qs";
 import Database from "better-sqlite3";
 
 dotenv.config();
@@ -41,10 +43,88 @@ const insertSession = db.prepare(`
 `);
 const deleteSession = db.prepare("DELETE FROM sessions WHERE session_id = ?");
 const updateSession = db.prepare(`
-  UPDATE sessions 
+  UPDATE sessions
   SET access_token = ?, refresh_token = ?, expires_at = ?
   WHERE session_id = ?
 `);
+
+async function search(songname) {
+  const searchUrl = `https://api.genius.com/search?${qs.stringify({
+    q: songname,
+  })}`;
+  const searchResponse = await axios.get(searchUrl, {
+    headers: {
+      Authorization: `Bearer ${GENIUS_ACCESS_TOKEN}`,
+    },
+  });
+
+  const searchResults = searchResponse.data.response.hits;
+  const results = searchResults.map(({ result }) => ({
+    title: result.title,
+    artist: result.primary_artist.name,
+    image: result.song_art_image_url,
+    url: result.url,
+  }));
+
+  return { results };
+}
+
+async function getLyrics(lyricsUrl) {
+  const lyricsPageData = await axios.get(lyricsUrl);
+  const $ = cheerio.load(lyricsPageData.data);
+
+  const lyricsContainers = $('div[data-lyrics-container="true"]');
+  let lyricsText = "";
+
+  lyricsContainers.each((index, element) => {
+    const $element = $(element);
+
+    $element.find('[data-exclude-from-selection="true"]').remove();
+    $element.find(".LyricsHeader__Container-sc-d6abeb2b-1").remove();
+    $element.find(".ContributorsCreditSong__Container-sc-3ec5a79c-0").remove();
+    $element.find(".SongBioPreview__Container-sc-8d233cbc-0").remove();
+    $element.find(".LyricsHeader__SongBioPreview-sc-d6abeb2b-12").remove();
+
+    $element.find("button").remove();
+    $element.find("svg").remove();
+    $element.find(".Dropdown__Container-sc-791290da-0").remove();
+    $element.find('[class*="Header"]').remove();
+    $element.find('[class*="Tooltip"]').remove();
+    $element.find('[class*="Metadata"]').remove();
+
+    $element.find('[style*="opacity:0"]').remove();
+    $element.find('[style*="position:absolute"]').remove();
+    $element.find('[tabindex="0"][style*="pointer-events:none"]').remove();
+
+    let lyricsHtml = $element.html();
+    if (lyricsHtml) {
+      lyricsHtml = lyricsHtml.replace(/<br\s*\/?>/gi, "\n");
+
+      const lyricsSection = cheerio.load(lyricsHtml).text().trim();
+
+      const lines = lyricsSection.split("\n").filter((line) => {
+        const trimmedLine = line.trim();
+
+        return (
+          trimmedLine &&
+          !trimmedLine.match(/^\d+\s+Contributors?$/i) &&
+          !trimmedLine.match(/^.*Lyrics$/i) &&
+          !trimmedLine.match(/^Read More/i) &&
+          !trimmedLine.match(/^Translations$/i) &&
+          !trimmedLine.includes("is a melodic piece") &&
+          !trimmedLine.includes("collaboration between") &&
+          trimmedLine.length > 0
+        );
+      });
+
+      if (lines.length > 0) {
+        lyricsText += lines.join("\n") + "\n";
+      }
+    }
+  });
+
+  return { lyrics: lyricsText.trim() };
+}
 
 app.use(
   cors({
@@ -64,8 +144,12 @@ const REDIRECT_URI = process.env.BACKEND_BASE_URI
 const FRONTEND_REDIRECT =
   process.env.FRONTEND_REDIRECT_URI || "http://localhost:5173";
 
+const GENIUS_ACCESS_TOKEN =
+  "ohCXKqz-spvgUf4Rq1lGNdJM-Lp2--eetb0VaR5WzROO4rxKFMMVHzTyN0Fsr64u";
+
 const activeListeners = new Map();
 const playbackCache = new Map();
+const lyricsCache = new Map();
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
@@ -213,6 +297,7 @@ app.get("/", (req, res) => {
       login: "/login",
       callback: "/callback",
       data: "/api/data",
+      lyrics: "/api/lyrics",
     },
     websocket: "socket.io enabled",
   });
@@ -363,6 +448,91 @@ app.get("/api/data", async (req, res) => {
     });
   } catch (err) {
     handleApiError(err, res, session);
+  }
+});
+
+app.get("/api/lyrics", async (req, res) => {
+  try {
+    const { songname, artist } = req.query;
+
+    if (!songname) {
+      return res.status(400).json({ error: "Song name is required" });
+    }
+
+    const cacheKey = `${songname}-${artist || ""}`.toLowerCase().trim();
+
+    if (lyricsCache.has(cacheKey)) {
+      console.log(`Serving lyrics from cache for: ${cacheKey}`);
+      return res.json(lyricsCache.get(cacheKey));
+    }
+
+    let searchResults = await search(songname);
+    console.log(searchResults);
+    if (artist && (!searchResults.results || searchResults.results.length === 0)) {
+      searchResults = await search(`${songname} by ${artist}`);
+    }
+
+    if (!searchResults.results || searchResults.results.length === 0) {
+      return res.status(404).json({ error: "No songs found" });
+    }
+
+    const songnameLower = songname.toLowerCase();
+    const artistLower = artist ? artist.toLowerCase() : null;
+    let matchedResult = null;
+    for (const result of searchResults.results) {
+      console.log(result.title, "-", result.artist);
+      const titleLower = result.title.toLowerCase();
+      const resultArtistLower = result.artist.toLowerCase();
+      if (titleLower.includes(songnameLower)) {
+        if (!artist) {
+          matchedResult = result;
+          break;
+        } else {
+          if (
+            resultArtistLower.includes(artistLower) ||
+            titleLower.includes(artistLower)
+          ) {
+            matchedResult = result;
+            break;
+          }
+
+          const artistWords = artistLower.split(/\s+/);
+          if (artistWords.length > 1) {
+            for (const word of artistWords) {
+              if (
+                resultArtistLower.includes(word) ||
+                titleLower.includes(word)
+              ) {
+                matchedResult = result;
+                break;
+              }
+            }
+            if (matchedResult) break;
+          }
+        }
+      }
+    }
+
+    if (!matchedResult) {
+      return res.status(404).json({ error: "No matching song found" });
+    }
+
+    const lyricsData = await getLyrics(matchedResult.url);
+
+    const responseData = {
+      title: matchedResult.title,
+      artist: matchedResult.artist,
+      image: matchedResult.image,
+      lyrics: lyricsData.lyrics,
+    };
+
+    lyricsCache.set(cacheKey, responseData);
+    console.log(`Cached lyrics for: ${cacheKey}`);
+
+    res.json(responseData);
+  } catch (error) {
+    console.error("Error fetching lyrics:", error);
+    res.status(500).json({ error: "Failed to fetch lyrics" });
   }
 });
 
