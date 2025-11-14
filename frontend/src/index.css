@@ -1,0 +1,296 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Regular.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Regular.woff") format("woff"),
+    url("/fonts/SpotifyMix-Regular.eot");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-RegularItalic.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-RegularItalic.woff") format("woff"),
+    url("/fonts/SpotifyMix-RegularItalic.eot");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+.custom-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.custom-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar-thumb {
+  position: absolute;
+  right: 0px;
+  width: 14px;
+  background-color: #6b6b6b;
+  border-radius: 0;
+  top: 0;
+  height: 40vh;
+  z-index: 50;
+  opacity: 0.4;
+  transition: opacity 160ms linear, background-color 120ms linear;
+}
+.custom-scrollbar-thumb:hover {
+  background-color: #7f7f7f;
+}
+
+.custom-scroll-wrapper {
+  position: relative;
+}
+
+.custom-scroll-wrapper:hover .custom-scrollbar-thumb,
+.custom-scrollbar-thumb.dragging {
+  opacity: 0.2;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Medium.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Medium.woff") format("woff"),
+    url("/fonts/SpotifyMix-Medium.eot");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-MediumItalic.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-MediumItalic.woff") format("woff"),
+    url("/fonts/SpotifyMix-MediumItalic.eot");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Bold.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Bold.woff") format("woff"),
+    url("/fonts/SpotifyMix-Bold.eot");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-BoldItalic.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-BoldItalic.woff") format("woff"),
+    url("/fonts/SpotifyMix-BoldItalic.eot");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Extrabold.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Extrabold.woff") format("woff"),
+    url("/fonts/SpotifyMix-Extrabold.eot");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Black.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Black.woff") format("woff"),
+    url("/fonts/SpotifyMix-Black.eot");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Thin.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Thin.woff") format("woff"),
+    url("/fonts/SpotifyMix-Thin.eot");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Light.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Light.woff") format("woff"),
+    url("/fonts/SpotifyMix-Light.eot");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SpotifyMix";
+  src: url("/fonts/SpotifyMix-Ultra.ttf") format("truetype"),
+    url("/fonts/SpotifyMix-Ultra.woff") format("woff"),
+    url("/fonts/SpotifyMix-Ultra.eot");
+  font-weight: 950;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  font-family: "SpotifyMix", sans-serif !important;
+}
+
+:root {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.35 0.02 165.48);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.35 0.02 165.48);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.35 0.02 165.48);
+  --primary: oklch(0.67 0.17 153.85);
+  --primary-foreground: oklch(0.99 0.02 169.99);
+  --secondary: oklch(0.9 0.02 238.66);
+  --secondary-foreground: oklch(0.2 0.02 266.02);
+  --muted: oklch(0.9 0.02 240.73);
+  --muted-foreground: oklch(0.5 0.03 268.53);
+  --accent: oklch(0.9 0.02 240.73);
+  --accent-foreground: oklch(0.35 0.02 165.48);
+  --destructive: oklch(0.61 0.24 20.96);
+  --border: oklch(0.94 0.01 238.46);
+  --input: oklch(0.85 0.02 240.75);
+  --ring: oklch(0.67 0.17 153.85);
+  --chart-1: oklch(0.67 0.17 153.85);
+  --chart-2: oklch(0.5 0.1 270.06);
+  --chart-3: oklch(0.72 0.12 201.79);
+  --chart-4: oklch(0.8 0.1 100.65);
+  --chart-5: oklch(0.6 0.15 300.14);
+  --sidebar: oklch(0.98 0.01 238.45);
+  --sidebar-foreground: oklch(0.35 0.02 165.48);
+  --sidebar-primary: oklch(0.67 0.17 153.85);
+  --sidebar-primary-foreground: oklch(0.98 0.01 238.45);
+  --sidebar-accent: oklch(0.9 0.02 240.73);
+  --sidebar-accent-foreground: oklch(0.35 0.02 165.48);
+  --sidebar-border: oklch(0.85 0.02 240.75);
+  --sidebar-ring: oklch(0.67 0.17 153.85);
+  --destructive-foreground: oklch(1 0 0);
+  --font-sans: "SpotifyMix", sans-serif;
+  --font-serif: "SpotifyMix", sans-serif;
+  --font-mono: "SpotifyMix", monospace;
+  --radius: 0.25rem;
+  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 1px 2px -2px hsl(0 0% 0% / 0.1);
+  --shadow: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 1px 2px -2px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 2px 4px -2px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 4px 6px -2px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 8px 10px -2px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
+  --tracking-normal: 0em;
+}
+
+.dark {
+  --background: oklch(0.15 0.02 269.18);
+  --foreground: oklch(0.95 0.01 238.46);
+  --card: oklch(0.2 0.02 266.02);
+  --card-foreground: oklch(0.95 0.01 238.46);
+  --popover: oklch(0.2 0.02 266.02);
+  --popover-foreground: oklch(0.95 0.01 238.46);
+  --primary: oklch(0.67 0.17 153.85);
+  --primary-foreground: oklch(0.15 0.02 269.18);
+  --secondary: oklch(0.3 0.03 271.05);
+  --secondary-foreground: oklch(0.95 0.01 238.46);
+  --muted: oklch(0.3 0.03 271.05);
+  --muted-foreground: oklch(0.6 0.03 269.46);
+  --accent: oklch(0.3 0.03 271.05);
+  --accent-foreground: oklch(0.95 0.01 238.46);
+  --destructive: oklch(0.64 0.25 19.69);
+  --border: oklch(0.95 0.01 238.46 / 15%);
+  --input: oklch(0.95 0.01 238.46 / 20%);
+  --ring: oklch(0.67 0.17 153.85);
+  --chart-1: oklch(0.67 0.17 153.85);
+  --chart-2: oklch(0.6 0.1 269.83);
+  --chart-3: oklch(0.72 0.12 201.79);
+  --chart-4: oklch(0.8 0.1 100.65);
+  --chart-5: oklch(0.6 0.15 300.14);
+  --sidebar: oklch(0.2 0.02 266.02);
+  --sidebar-foreground: oklch(0.95 0.01 238.46);
+  --sidebar-primary: oklch(0.67 0.17 153.85);
+  --sidebar-primary-foreground: oklch(0.15 0.02 269.18);
+  --sidebar-accent: oklch(0.3 0.03 271.05);
+  --sidebar-accent-foreground: oklch(0.95 0.01 238.46);
+  --sidebar-border: oklch(0.95 0.01 238.46 / 15%);
+  --sidebar-ring: oklch(0.67 0.17 153.85);
+  --destructive-foreground: oklch(1 0 0);
+  --font-sans: "SpotifyMix", sans-serif;
+  --font-serif: "SpotifyMix", sans-serif;
+  --font-mono: "SpotifyMix", monospace;
+  --radius: 0.25rem;
+  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 1px 2px -2px hsl(0 0% 0% / 0.1);
+  --shadow: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 1px 2px -2px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 2px 4px -2px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 4px 6px -2px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.1),
+    0px 8px 10px -2px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}
