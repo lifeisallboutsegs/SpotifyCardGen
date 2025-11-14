@@ -64,6 +64,7 @@ const io = new Server(httpServer, {
     credentials: false,
   },
   transports: ['polling'],
+  allowEIO3: true,
 });
 
 const PORT = process.env.PORT || 3000;

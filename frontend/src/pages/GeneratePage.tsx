@@ -493,7 +493,7 @@ export default function GeneratePage() {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
-      transports: ["websocket", "polling"],
+      transports: ["polling"],
     });
 
     const handleConnect = () => {
