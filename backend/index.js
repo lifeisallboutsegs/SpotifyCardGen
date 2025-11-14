@@ -8,11 +8,23 @@ import querystring from "querystring";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import qs from "qs";
-import Database from "better-sqlite3";
+import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const sessionSchema = new mongoose.Schema({
+  session_id: { type: String, unique: true, required: true },
+  access_token: { type: String, required: true },
+  refresh_token: { type: String, required: true },
+  expires_at: { type: Number, required: true },
+  created_at: { type: Number, default: () => Date.now() }
+});
+
+const Session = mongoose.model('Session', sessionSchema);
+
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/spotify');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,31 +41,18 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 3000;
 let uptime = Date.now();
 
-const db = new Database("spotify_tokens.db");
+// Database functions
+const getSession = async (sessionId) => await Session.findOne({ session_id: sessionId });
+const insertSession = async (sessionId, accessToken, refreshToken, expiresAt) => {
+  const session = new Session({ session_id: sessionId, access_token: accessToken, refresh_token: refreshToken, expires_at: expiresAt });
+  await session.save();
+};
+const deleteSession = async (sessionId) => await Session.deleteOne({ session_id: sessionId });
+const updateSession = async (sessionId, accessToken, refreshToken, expiresAt) => {
+  await Session.updateOne({ session_id: sessionId }, { access_token: accessToken, refresh_token: refreshToken, expires_at: expiresAt });
+};
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS sessions (
-    session_id TEXT PRIMARY KEY,
-    access_token TEXT NOT NULL,
-    refresh_token TEXT NOT NULL,
-    expires_at INTEGER NOT NULL,
-    created_at INTEGER DEFAULT (strftime('%s', 'now'))
-  )
-`);
-
-const getSession = db.prepare("SELECT * FROM sessions WHERE session_id = ?");
-const insertSession = db.prepare(`
-  INSERT OR REPLACE INTO sessions (session_id, access_token, refresh_token, expires_at)
-  VALUES (?, ?, ?, ?)
-`);
-const deleteSession = db.prepare("DELETE FROM sessions WHERE session_id = ?");
-const updateSession = db.prepare(`
-  UPDATE sessions
-  SET access_token = ?, refresh_token = ?, expires_at = ?
-  WHERE session_id = ?
-`);
-
-const frontendDistPath = path.join(__dirname, "../frontend/dist");
+const frontendDistPath = path.join(__dirname, "./dist");
 app.use(express.static(frontendDistPath));
 
 app.use((req, res, next) => {
@@ -203,7 +202,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const sessionData = getSession.get(session);
+    const sessionData = await getSession(session);
     if (!sessionData) {
       socket.emit("error", { message: "Invalid session" });
       return;
@@ -223,7 +222,7 @@ io.on("connection", (socket) => {
           await refreshAccessToken(session, sessionData);
         }
 
-        const updatedSession = getSession.get(session);
+        const updatedSession = await getSession(session);
         const response = await axios.get(
           "https://api.spotify.com/v1/me/player/currently-playing",
           {
@@ -405,7 +404,7 @@ app.get("/callback", async (req, res) => {
     const sessionId = generateRandomString(32);
     const expiresAt = Date.now() + expires_in * 1000;
 
-    insertSession.run(sessionId, access_token, refresh_token, expiresAt);
+    await insertSession(sessionId, access_token, refresh_token, expiresAt);
 
     setTimeout(
       () => refreshTokenSilently(sessionId),
@@ -424,14 +423,14 @@ app.get("/api/data", async (req, res) => {
     req.headers.authorization?.replace("Bearer ", "") || req.query.session;
   if (!session) return res.status(401).json({ error: "No session" });
 
-  const sessionData = getSession.get(session);
+  const sessionData = await getSession(session);
   if (!sessionData) return res.status(401).json({ error: "Invalid session" });
 
   if (Date.now() >= sessionData.expires_at - 60000) {
     await refreshAccessToken(session, sessionData);
   }
 
-  const updatedSession = getSession.get(session);
+  const updatedSession = await getSession(session);
   const token = updatedSession.access_token;
 
   try {
@@ -924,16 +923,16 @@ async function refreshAccessToken(sessionId, session) {
   const { access_token, expires_in, refresh_token } = tokenResponse.data;
   const expiresAt = Date.now() + expires_in * 1000;
 
-  updateSession.run(
+  await updateSession(
+    sessionId,
     access_token,
     refresh_token || session.refresh_token,
-    expiresAt,
-    sessionId
+    expiresAt
   );
 }
 
 async function refreshTokenSilently(sessionId) {
-  const session = getSession.get(sessionId);
+  const session = await getSession(sessionId);
   if (!session) return;
 
   try {
@@ -944,11 +943,11 @@ async function refreshTokenSilently(sessionId) {
   }
 }
 
-function handleApiError(err, res, sessionId) {
+async function handleApiError(err, res, sessionId) {
   console.error("API error:", err.response?.data || err.message);
 
   if (err.response?.status === 401) {
-    deleteSession.run(sessionId);
+    await deleteSession(sessionId);
     return res
       .status(401)
       .json({ error: "Session expired", needsReauth: true });
@@ -967,17 +966,18 @@ function generateRandomString(length) {
   return result;
 }
 
-const allSessions = db.prepare("SELECT session_id, expires_at FROM sessions");
-const sessions = allSessions.all();
-sessions.forEach((session) => {
-  const timeUntilExpiry = session.expires_at - Date.now();
-  if (timeUntilExpiry > 300000) {
-    setTimeout(
-      () => refreshTokenSilently(session.session_id),
-      timeUntilExpiry - 300000
-    );
-  }
-});
+(async () => {
+  const sessions = await Session.find({}, 'session_id expires_at');
+  sessions.forEach((session) => {
+    const timeUntilExpiry = session.expires_at - Date.now();
+    if (timeUntilExpiry > 300000) {
+      setTimeout(
+        () => refreshTokenSilently(session.session_id),
+        timeUntilExpiry - 300000
+      );
+    }
+  });
+})();
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
