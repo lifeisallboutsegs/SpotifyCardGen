@@ -41,7 +41,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:3000",
+    origin: process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app",
     credentials: true,
   },
 });
@@ -104,7 +104,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:3000",
+    origin: process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app",
     credentials: true,
   })
 );
@@ -201,7 +201,7 @@ async function getLyrics(lyricsUrl) {
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_REDIRECT_URI || "http://localhost:5173",
+    origin: process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app",
     credentials: true,
   })
 );
@@ -213,9 +213,9 @@ const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const REDIRECT_URI = process.env.BACKEND_BASE_URI
   ? `${process.env.BACKEND_BASE_URI}/callback`
-  : "http://localhost:3000/callback";
+  : "https://spotifycardgen.vercel.app/callback";
 const FRONTEND_REDIRECT =
-  process.env.FRONTEND_REDIRECT_URI || "http://localhost:5173";
+  process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app";
 
 const GENIUS_ACCESS_TOKEN =
   "ohCXKqz-spvgUf4Rq1lGNdJM-Lp2--eetb0VaR5WzROO4rxKFMMVHzTyN0Fsr64u";
