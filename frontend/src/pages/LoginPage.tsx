@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [accentColor, setAccentColor] = useState("#535353");
   const [topArtists, setTopArtists] = useState([]);
   const [topTracks, setTopTracks] = useState([]);
+  const [showMiniHeader, setShowMiniHeader] = useState(false);
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const mainThumbRef = useRef<HTMLDivElement | null>(null);
   const artistsScrollRef = useRef<HTMLDivElement | null>(null);
@@ -112,7 +113,10 @@ export default function LoginPage() {
     const scrollEl = mainScrollRef.current;
     const thumbEl = mainThumbRef.current;
     if (scrollEl && thumbEl) {
-      const onScroll = () => updateThumb(scrollEl, thumbEl);
+      const onScroll = () => {
+        updateThumb(scrollEl, thumbEl);
+        setShowMiniHeader(scrollEl.scrollTop > 400);
+      };
       const onResize = () => updateThumb(scrollEl, thumbEl);
       scrollEl.addEventListener("scroll", onScroll);
       window.addEventListener("resize", onResize);
@@ -135,25 +139,25 @@ export default function LoginPage() {
       scrollEl.addEventListener("scroll", onScroll);
       window.addEventListener("resize", onResize);
 
-      // Horizontal mouse wheel scrolling - attach to wrapper to catch events from child elements
+   
       const onWheel = (e: WheelEvent) => {
-        // Check if the event target is within the wrapper area
+      
         const target = e.target as Node;
         if (wrapperEl.contains(target) || wrapperEl === target) {
-          // Handle both vertical wheel (deltaY) and horizontal wheel/trackpad (deltaX)
+         
           if (e.deltaY !== 0 || e.deltaX !== 0) {
             e.preventDefault();
             e.stopPropagation();
-            // Use deltaY for vertical wheel scrolling, deltaX for horizontal trackpad gestures
+          
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             scrollEl.scrollLeft += scrollAmount;
           }
         }
       };
-      // Use capturing phase to catch events from child elements (cards, images, buttons, etc.)
+    
       wrapperEl.addEventListener("wheel", onWheel, { passive: false, capture: true });
 
-      // Touch/swipe support for mobile
+     
       let touchStartX = 0;
       let touchStartY = 0;
       let isScrolling = false;
@@ -171,7 +175,7 @@ export default function LoginPage() {
           const diffX = Math.abs(touchCurrentX - touchStartX);
           const diffY = Math.abs(touchCurrentY - touchStartY);
 
-          // Determine if horizontal or vertical scroll
+          
           if (diffX > diffY) {
             isScrolling = true;
           }
@@ -406,7 +410,7 @@ export default function LoginPage() {
   const displayError = error || localError;
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#333333] text-white flex items-center justify-center p-4">
       <div className="w-full max-w-6xl">
         {displayError && (
           <div className="mb-6">
@@ -419,18 +423,29 @@ export default function LoginPage() {
         {user ? (
           <div className="rounded-xl overflow-hidden shadow-2xl max-h-[80vh] max-w-6xl mx-auto relative">
             <div className="h-[80vh]">
-              <div className="custom-scroll-wrapper h-full">
+              <div className="custom-scroll-wrapper h-full relative bg-amber-600">
                 <div
                   ref={mainScrollRef}
-                  className="overflow-y-auto h-full pb-28 custom-scroll"
+                  className="overflow-y-auto h-full pb-28 custom-scroll bg-blue-600"
                 >
+                  <div
+                    className="sticky top-0 z-10 py-4 px-8 transition-transform duration-300 ease-in-out"
+                    style={{
+                      background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                      transform: showMiniHeader ? 'translateY(0)' : 'translateY(-100%)',
+                    }}
+                  >
+                    <h1 className="text-1xl md:text-2xl font-bold tracking-tight">
+                      {user.display_name}
+                    </h1>
+                  </div>
                   <div
                     className="relative"
                     style={{
                       background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
                     }}
                   >
-                    <div className="px-8 pt-16 pb-8">
+                    <div className="px-8 py-10">
                       <div className="flex items-end gap-6">
                         <div className="relative shrink-0">
                           <Avatar className="h-56 w-56 shadow-2xl">
@@ -573,8 +588,8 @@ export default function LoginPage() {
                                         </p>
                                       </div>
                                     </div>
-                                  ))}
-                              </div>
+                                ))}
+                            </div>
                             </div>
                           </div>
                         </section>
@@ -597,8 +612,13 @@ export default function LoginPage() {
                               .map((track: any, index: number) => (
                                 <div
                                   key={track.id || index}
-                                  className="flex items-center gap-4 p-2 rounded-lg hover:bg-[#282828] transition-colors group"
                                 >
+                                  <a
+                                    href={track.external_urls?.spotify}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-4 p-2 rounded-lg hover:bg-[#282828] transition-colors group"
+                                  >
                                   <div className="flex items-center justify-center w-10 text-[#a7a7a7] group-hover:text-white">
                                     <span className="group-hover:hidden">
                                       {index + 1}
@@ -633,8 +653,9 @@ export default function LoginPage() {
                                       ).padStart(2, "0")}
                                     </span>
                                   </div>
+                                </a>
                                 </div>
-                              ))}
+                            ))}
                           </div>
                         </section>
                       )}

@@ -20,6 +20,7 @@
 }
 
 .custom-scroll {
+  background-color: aquamarine;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -64,6 +65,7 @@
 .custom-scrollbar-thumb.scrollbar-visible.dragging {
   opacity: 0.9;
 }
+
 @font-face {
   font-family: "SpotifyMix";
   src: url("/fonts/SpotifyMix-Medium.ttf") format("truetype"),
