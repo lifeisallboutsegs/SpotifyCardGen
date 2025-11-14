@@ -24,15 +24,24 @@ const sessionSchema = new mongoose.Schema({
 
 const Session = mongoose.model("Session", sessionSchema);
 
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then((connection) => {
-    console.log("Connected to MongoDB:", connection.connection.host);
-  })
-  .catch((err) => {
+async function connectToDatabase() {
+  if (mongoose.connection.readyState >= 1) {
+    return;
+  }
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      bufferCommands: false,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    console.log("Connected to MongoDB");
+  } catch (err) {
     console.error("MongoDB connection error:", err);
-    process.exit(1);
-  });
+    throw err;
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,14 +58,17 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 3000;
 let uptime = Date.now();
 
-const getSession = async (sessionId) =>
-  await Session.findOne({ session_id: sessionId });
+const getSession = async (sessionId) => {
+  await connectToDatabase();
+  return await Session.findOne({ session_id: sessionId });
+};
 const insertSession = async (
   sessionId,
   accessToken,
   refreshToken,
   expiresAt
 ) => {
+  await connectToDatabase();
   const session = new Session({
     session_id: sessionId,
     access_token: accessToken,
@@ -65,14 +77,17 @@ const insertSession = async (
   });
   await session.save();
 };
-const deleteSession = async (sessionId) =>
-  await Session.deleteOne({ session_id: sessionId });
+const deleteSession = async (sessionId) => {
+  await connectToDatabase();
+  return await Session.deleteOne({ session_id: sessionId });
+};
 const updateSession = async (
   sessionId,
   accessToken,
   refreshToken,
   expiresAt
 ) => {
+  await connectToDatabase();
   await Session.updateOne(
     { session_id: sessionId },
     {
@@ -998,16 +1013,21 @@ function generateRandomString(length) {
 }
 
 (async () => {
-  const sessions = await Session.find({}, "session_id expires_at");
-  sessions.forEach((session) => {
-    const timeUntilExpiry = session.expires_at - Date.now();
-    if (timeUntilExpiry > 300000) {
-      setTimeout(
-        () => refreshTokenSilently(session.session_id),
-        timeUntilExpiry - 300000
-      );
-    }
-  });
+  try {
+    await connectToDatabase();
+    const sessions = await Session.find({}, "session_id expires_at");
+    sessions.forEach((session) => {
+      const timeUntilExpiry = session.expires_at - Date.now();
+      if (timeUntilExpiry > 300000) {
+        setTimeout(
+          () => refreshTokenSilently(session.session_id),
+          timeUntilExpiry - 300000
+        );
+      }
+    });
+  } catch (err) {
+    console.error("Error initializing sessions:", err);
+  }
 })();
 
 httpServer.listen(PORT, () => {
