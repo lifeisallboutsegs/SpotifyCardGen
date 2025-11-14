@@ -92,7 +92,6 @@ export default function LoginPage() {
     thumbEl.style.top = top + "px";
   };
 
-
   useEffect(() => {
     const scrollEl = mainScrollRef.current;
     const thumbEl = mainThumbRef.current;
@@ -112,7 +111,6 @@ export default function LoginPage() {
       };
     }
   }, [user, topArtists, topTracks, theme]);
-
 
   useEffect(() => {
     const attachDrag = (
@@ -258,13 +256,23 @@ export default function LoginPage() {
         {displayError && (
           <div className="mb-4 sm:mb-6">
             <div className="p-3 sm:p-4 bg-destructive/20 border border-destructive rounded-lg">
-              <p className="text-xs sm:text-sm text-destructive-foreground">{displayError}</p>
+              <p className="text-xs sm:text-sm text-destructive-foreground">
+                {displayError}
+              </p>
             </div>
           </div>
         )}
 
         {user ? (
-          <div className="rounded-xl overflow-hidden shadow-2xl max-h-[85vh] sm:max-h-[80vh] max-w-6xl mx-auto relative" style={{boxShadow: theme === "light" ? `0 25px 50px -12px ${accentColor}20` : `0 25px 50px -12px ${accentColor}30`}}>
+          <div
+            className="rounded-xl overflow-hidden shadow-2xl max-h-[85vh] sm:max-h-[80vh] max-w-6xl mx-auto relative"
+            style={{
+              boxShadow:
+                theme === "light"
+                  ? `0 25px 50px -12px ${accentColor}20`
+                  : `0 25px 50px -12px ${accentColor}30`,
+            }}
+          >
             <div className="h-[85vh] sm:h-[80vh]">
               <div className="custom-scroll-wrapper h-full relative">
                 <div
@@ -282,17 +290,20 @@ export default function LoginPage() {
                       <div
                         className="py-3 sm:py-4 px-4 sm:px-8 transition-transform duration-300 ease-in-out pointer-events-auto"
                         style={{
-                          background: theme === "light"
-                            ? `linear-gradient(180deg, ${accentColor}20 0%, ${accentColor}60 30%, ${accentColor}80 70%, ${accentColor}40 100%)`
-                            : `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}90 30%, ${accentColor}60 70%, ${accentColor}30 100%)`,
-                          backdropFilter: 'blur(20px)',
-                          WebkitBackdropFilter: 'blur(20px)',
-                          boxShadow: theme === "light"
-                            ? `0 8px 32px 0 ${accentColor}15`
-                            : `0 8px 32px 0 ${accentColor}20`,
-                          border: theme === "light"
-                            ? `1px solid ${accentColor}30`
-                            : `1px solid ${accentColor}40`,
+                          background:
+                            theme === "light"
+                              ? `linear-gradient(180deg, ${accentColor}20 0%, ${accentColor}60 30%, ${accentColor}80 70%, ${accentColor}40 100%)`
+                              : `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}90 30%, ${accentColor}60 70%, ${accentColor}30 100%)`,
+                          backdropFilter: "blur(20px)",
+                          WebkitBackdropFilter: "blur(20px)",
+                          boxShadow:
+                            theme === "light"
+                              ? `0 8px 32px 0 ${accentColor}15`
+                              : `0 8px 32px 0 ${accentColor}20`,
+                          border:
+                            theme === "light"
+                              ? `1px solid ${accentColor}30`
+                              : `1px solid ${accentColor}40`,
                           transform: showMiniHeader
                             ? "translateY(0)"
                             : "translateY(-100%)",
@@ -308,14 +319,16 @@ export default function LoginPage() {
                       <div
                         className="relative"
                         style={{
-                          background: theme === "light"
-                            ? `linear-gradient(135deg, ${accentColor}15 0%, ${accentColor}40 25%, ${accentColor}60 50%, ${accentColor}30 75%, ${accentColor}10 100%)`
-                            : `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}95 25%, ${accentColor}70 50%, ${accentColor}40 75%, ${accentColor}20 100%)`,
-                          backdropFilter: 'blur(15px)',
-                          WebkitBackdropFilter: 'blur(15px)',
-                          boxShadow: theme === "light"
-                            ? `inset 0 0 100px ${accentColor}5`
-                            : `inset 0 0 100px ${accentColor}10`,
+                          background:
+                            theme === "light"
+                              ? `linear-gradient(135deg, ${accentColor}15 0%, ${accentColor}40 25%, ${accentColor}60 50%, ${accentColor}30 75%, ${accentColor}10 100%)`
+                              : `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}95 25%, ${accentColor}70 50%, ${accentColor}40 75%, ${accentColor}20 100%)`,
+                          backdropFilter: "blur(15px)",
+                          WebkitBackdropFilter: "blur(15px)",
+                          boxShadow:
+                            theme === "light"
+                              ? `inset 0 0 100px ${accentColor}5`
+                              : `inset 0 0 100px ${accentColor}10`,
                         }}
                       >
                         <div className="px-4 sm:px-8 py-8 sm:py-10">
@@ -360,11 +373,15 @@ export default function LoginPage() {
                                   followers
                                 </span>
                                 <div className="hidden sm:flex items-center">
-                                  <span className="opacity-70 mx-2 text-muted-foreground">•</span>
+                                  <span className="opacity-70 mx-2 text-muted-foreground">
+                                    •
+                                  </span>
                                   <div className="bg-muted rounded-full p-1">
                                     <EyeOff className="h-4 w-4 text-muted-foreground" />
                                   </div>
-                                  <span className="opacity-70 mx-2 text-muted-foreground">•</span>
+                                  <span className="opacity-70 mx-2 text-muted-foreground">
+                                    •
+                                  </span>
                                 </div>
                                 <span className="flex items-center gap-1 opacity-90 text-base sm:text-lg sm:ml-auto text-foreground">
                                   <Crown className="h-5 w-5" />
@@ -383,11 +400,12 @@ export default function LoginPage() {
                       <div
                         className="relative"
                         style={{
-                          background: theme === "light"
-                            ? `linear-gradient(180deg, ${accentColor}20 0%, ${accentColor}10 10%, #ffffff 20%, #ffffff 100%)`
-                            : `linear-gradient(180deg, ${accentColor}30 0%, ${accentColor}15 10%, #121212 20%, #121212 100%)`,
-                          backdropFilter: 'blur(10px)',
-                          WebkitBackdropFilter: 'blur(10px)',
+                          background:
+                            theme === "light"
+                              ? `linear-gradient(180deg, ${accentColor}20 0%, ${accentColor}10 10%, #ffffff 20%, #ffffff 100%)`
+                              : `linear-gradient(180deg, ${accentColor}30 0%, ${accentColor}15 10%, #121212 20%, #121212 100%)`,
+                          backdropFilter: "blur(10px)",
+                          WebkitBackdropFilter: "blur(10px)",
                         }}
                       >
                         <div className="px-4 sm:px-8 py-8 pb-20 sm:pb-28">
@@ -412,7 +430,7 @@ export default function LoginPage() {
                                           key={artist.id || index}
                                           className={`rounded-xl transition-all cursor-pointer group flex flex-col shrink-0 bg-transparent ${
                                             theme === "light"
-                                              ? "hover:bg-gray-100"
+                                              ? "hover:bg-gray-300 hover:shadow-md"
                                               : "hover:bg-[#282828]"
                                           }`}
                                           style={{
@@ -492,11 +510,11 @@ export default function LoginPage() {
                                         rel="noopener noreferrer"
                                         className={`flex items-center gap-3 sm:gap-4 p-2 rounded-lg transition-colors group ${
                                           theme === "light"
-                                            ? "hover:bg-gray-100"
+                                            ? "hover:bg-gray-300 hover:shadow-sm"
                                             : "hover:bg-[#282828]"
                                         }`}
                                       >
-                                        <div className="flex items-center justify-center w-8 sm:w-10 text-muted-foreground group-hover:text-foreground flex-shrink-0">
+                                        <div className="flex items-center justify-center w-8 sm:w-10 text-muted-foreground group-hover:text-foreground shrink-0">
                                           <span className="text-sm sm:text-base group-hover:hidden">
                                             {index + 1}
                                           </span>
@@ -517,10 +535,10 @@ export default function LoginPage() {
                                               .join(", ")}
                                           </p>
                                         </div>
-                                        <div className="text-xs sm:text-sm text-muted-foreground hidden md:block flex-shrink-0">
+                                        <div className="text-xs sm:text-sm text-muted-foreground hidden md:block shrink-0">
                                           {track.album?.name}
                                         </div>
-                                        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                                        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                                           <span className="text-xs sm:text-sm text-muted-foreground">
                                             {Math.floor(
                                               track.duration_ms / 60000
@@ -578,7 +596,7 @@ export default function LoginPage() {
           </div>
         ) : (
           <div className="rounded-xl overflow-hidden shadow-2xl bg-card">
-            <div className="px-4 sm:px-6 sm:px-8 py-12 sm:py-16 text-center">
+            <div className="px-4 sm:px-8 py-12 sm:py-16 text-center">
               <div className="inline-flex items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-56 md:h-56 bg-muted rounded-full mb-6 sm:mb-8 shadow-2xl">
                 <Music className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground" />
               </div>
@@ -600,33 +618,57 @@ export default function LoginPage() {
               </Button>
             </div>
 
-            <div className="px-4 sm:px-6 sm:px-8 pb-12 sm:pb-16">
+            <div className="px-4 sm:px-8 pb-12 sm:pb-16">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-                <div className="p-4 sm:p-6 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                <div
+                  className={`p-4 sm:p-6 rounded-lg transition-colors ${
+                    theme === "light"
+                      ? "bg-gray-50 hover:bg-gray-300 hover:shadow-lg"
+                      : "bg-muted/50 hover:bg-muted"
+                  }`}
+                >
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                     <Disc3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground">Top Tracks</h3>
+                  <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground">
+                    Top Tracks
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     View your most played songs and create stunning visual cards
                   </p>
                 </div>
 
-                <div className="p-4 sm:p-6 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                <div
+                  className={`p-4 sm:p-6 rounded-lg transition-colors ${
+                    theme === "light"
+                      ? "bg-gray-50 hover:bg-gray-300 hover:shadow-lg"
+                      : "bg-muted/50 hover:bg-muted"
+                  }`}
+                >
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                     <Play className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground">Live Status</h3>
+                  <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground">
+                    Live Status
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     Real-time sync with your currently playing tracks
                   </p>
                 </div>
 
-                <div className="p-4 sm:p-6 bg-muted/50 rounded-lg hover:bg-muted transition-colors sm:col-span-2 md:col-span-1">
+                <div
+                  className={`p-4 sm:p-6 rounded-lg transition-colors sm:col-span-2 md:col-span-1 ${
+                    theme === "light"
+                      ? "bg-gray-50 hover:bg-gray-300 hover:shadow-lg"
+                      : "bg-muted/50 hover:bg-muted"
+                  }`}
+                >
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                     <Music className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground">Favorite Artists</h3>
+                  <h3 className="text-base sm:text-lg font-bold mb-2 text-foreground">
+                    Favorite Artists
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     Showcase your top artists with beautiful designs
                   </p>
