@@ -19,12 +19,12 @@ const sessionSchema = new mongoose.Schema({
   access_token: { type: String, required: true },
   refresh_token: { type: String, required: true },
   expires_at: { type: Number, required: true },
-  created_at: { type: Number, default: () => Date.now() }
+  created_at: { type: Number, default: () => Date.now() },
 });
 
-const Session = mongoose.model('Session', sessionSchema);
+const Session = mongoose.model("Session", sessionSchema);
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/spotify');
+mongoose.connect(process.env.MONGODB_URI);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,15 +41,38 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 3000;
 let uptime = Date.now();
 
-// Database functions
-const getSession = async (sessionId) => await Session.findOne({ session_id: sessionId });
-const insertSession = async (sessionId, accessToken, refreshToken, expiresAt) => {
-  const session = new Session({ session_id: sessionId, access_token: accessToken, refresh_token: refreshToken, expires_at: expiresAt });
+const getSession = async (sessionId) =>
+  await Session.findOne({ session_id: sessionId });
+const insertSession = async (
+  sessionId,
+  accessToken,
+  refreshToken,
+  expiresAt
+) => {
+  const session = new Session({
+    session_id: sessionId,
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_at: expiresAt,
+  });
   await session.save();
 };
-const deleteSession = async (sessionId) => await Session.deleteOne({ session_id: sessionId });
-const updateSession = async (sessionId, accessToken, refreshToken, expiresAt) => {
-  await Session.updateOne({ session_id: sessionId }, { access_token: accessToken, refresh_token: refreshToken, expires_at: expiresAt });
+const deleteSession = async (sessionId) =>
+  await Session.deleteOne({ session_id: sessionId });
+const updateSession = async (
+  sessionId,
+  accessToken,
+  refreshToken,
+  expiresAt
+) => {
+  await Session.updateOne(
+    { session_id: sessionId },
+    {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: expiresAt,
+    }
+  );
 };
 
 const frontendDistPath = path.join(__dirname, "./dist");
@@ -967,7 +990,7 @@ function generateRandomString(length) {
 }
 
 (async () => {
-  const sessions = await Session.find({}, 'session_id expires_at');
+  const sessions = await Session.find({}, "session_id expires_at");
   sessions.forEach((session) => {
     const timeUntilExpiry = session.expires_at - Date.now();
     if (timeUntilExpiry > 300000) {
