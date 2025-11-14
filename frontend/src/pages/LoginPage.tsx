@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CountryFlag } from "@/components/CountryFlag";
-import { Music, Play, Disc3, ExternalLink } from "lucide-react";
+import { Music, Play, Disc3, ExternalLink, EyeOff, Users, Crown } from "lucide-react";
 import { extractAverageColor, rgbToHex } from "@/lib/colorExtractor";
 
 const API_BASE_URL =
@@ -71,10 +71,10 @@ export default function LoginPage() {
     const visible = scrollEl.clientHeight;
     const total = scrollEl.scrollHeight;
     if (total <= visible) {
-      thumbEl.style.opacity = "0";
+      thumbEl.classList.remove("scrollbar-visible");
       return;
     }
-    thumbEl.style.opacity = "1";
+    thumbEl.classList.add("scrollbar-visible");
     const ratio = visible / total;
     const thumbHeight = Math.max(24, Math.floor(visible * ratio));
     const maxTop = visible - thumbHeight;
@@ -92,10 +92,10 @@ export default function LoginPage() {
     const visible = scrollEl.clientWidth;
     const total = scrollEl.scrollWidth;
     if (total <= visible) {
-      thumbEl.style.opacity = "0";
+      thumbEl.classList.remove("scrollbar-visible");
       return;
     }
-    thumbEl.style.opacity = "1";
+    thumbEl.classList.add("scrollbar-visible");
     const ratio = visible / total;
     const thumbWidth = Math.max(24, Math.floor(visible * ratio));
     const maxLeft = visible - thumbWidth;
@@ -444,10 +444,10 @@ export default function LoginPage() {
                             </AvatarFallback>
                           </Avatar>
                           {user.country && (
-                            <div className="absolute -bottom-2 -right-2">
+                            <div className="absolute bottom-0 right-0">
                               <CountryFlag
                                 countryCode={user.country}
-                                className="h-12 w-16 rounded-md border-0 object-cover shadow-lg"
+                                className="h-12 w-16 rounded-xl border-0 object-cover shadow-lg"
                               />
                             </div>
                           )}
@@ -460,18 +460,22 @@ export default function LoginPage() {
                           <h1 className="text-7xl md:text-8xl font-black mb-4 tracking-tight wrap-break-word">
                             {user.display_name}
                           </h1>
-                          <div className="flex items-center gap-2 text-sm flex-wrap">
-                            <span className="font-medium">
-                              {(user.followers?.total || 0).toLocaleString()}{" "}
-                              followers
+                          <div className="flex items-center text-sm">
+                            <span className="flex items-center gap-1 font-medium text-lg">
+                              <Users className="h-5 w-5" />
+                              {(user.followers?.total || 0).toLocaleString()} followers
                             </span>
-                            <span className="opacity-70">•</span>
-                            <span className="opacity-90">
+                            <span className="opacity-70 mx-2">•</span>
+                            <div className="bg-[#282828] rounded-full p-1">
+                              <EyeOff className="h-4 w-4" />
+                            </div>
+                            <span className="opacity-70 mx-2">•</span>
+                            <span className="flex items-center gap-1 opacity-90 text-lg ml-auto">
+                              <Crown className="h-5 w-5" />
                               {user.product
                                 ? user.product.charAt(0).toUpperCase() +
                                   user.product.slice(1)
-                                : "Free"}{" "}
-                              Plan
+                                : "Free"} Plan
                             </span>
                           </div>
                         </div>
@@ -520,7 +524,7 @@ export default function LoginPage() {
                                   .map((artist: any, index: number) => (
                                     <div
                                       key={artist.id || index}
-                                      className="bg-[#181818] hover:bg-[#282828] rounded-lg transition-all cursor-pointer group flex flex-col shrink-0"
+                                      className="hover:bg-[#282828] rounded-xl transition-all cursor-pointer group flex flex-col shrink-0"
                                       style={{
                                         padding: "12px",
                                         minHeight: "224px",
