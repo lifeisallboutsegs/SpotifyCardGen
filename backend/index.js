@@ -11,13 +11,17 @@ import qs from "qs";
 import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
-import { SocksProxyAgent } from 'socks-proxy-agent';
+import { SocksProxyAgent } from "socks-proxy-agent";
 
 dotenv.config();
 
 const proxyAxios = axios.create({
-  httpsAgent: new SocksProxyAgent('socks5://vintfozd:tksi79o0bavq@45.38.107.97:6014'),
-  httpAgent: new SocksProxyAgent('socks5://vintfozd:tksi79o0bavq@45.38.107.97:6014')
+  httpsAgent: new SocksProxyAgent(
+    "socks5://vintfozd:tksi79o0bavq@45.38.107.97:6014"
+  ),
+  httpAgent: new SocksProxyAgent(
+    "socks5://vintfozd:tksi79o0bavq@45.38.107.97:6014"
+  ),
 });
 
 const sessionSchema = new mongoose.Schema({
@@ -28,7 +32,20 @@ const sessionSchema = new mongoose.Schema({
   created_at: { type: Number, default: () => Date.now() },
 });
 
+const lyricsSchema = new mongoose.Schema({
+  cache_key: { type: String, unique: true, required: true },
+  title: { type: String, required: true },
+  artist: { type: String, required: true },
+  image: { type: String, required: true },
+  lyrics: { type: String, required: true },
+  created_at: { type: Number, default: () => Date.now() },
+  last_accessed: { type: Number, default: () => Date.now() },
+});
+
+lyricsSchema.index({ title: "text", artist: "text", lyrics: "text" });
+
 const Session = mongoose.model("Session", sessionSchema);
+const Lyrics = mongoose.model("Lyrics", lyricsSchema);
 
 let connectionPromise = null;
 
@@ -69,7 +86,7 @@ const io = new Server(httpServer, {
     origin: "*",
     credentials: false,
   },
-  transports: ['websocket', 'polling'],
+  transports: ["websocket", "polling"],
   allowEIO3: true,
 });
 
@@ -137,7 +154,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app",
+    origin:
+      process.env.FRONTEND_REDIRECT_URI || "https://spotifycardgen.vercel.app",
     credentials: true,
   })
 );
@@ -558,8 +576,34 @@ app.get("/api/lyrics", async (req, res) => {
     const cacheKey = `${songname}-${artist || ""}`.toLowerCase().trim();
 
     if (lyricsCache.has(cacheKey)) {
-      console.log(`Serving lyrics from cache for: ${cacheKey}`);
+      console.log(`Serving lyrics from memory cache for: ${cacheKey}`);
       return res.json(lyricsCache.get(cacheKey));
+    }
+
+    try {
+      const cachedLyrics = await Lyrics.findOne({ cache_key: cacheKey });
+      if (cachedLyrics) {
+        console.log(`Serving lyrics from database cache for: ${cacheKey}`);
+
+        await Lyrics.updateOne(
+          { cache_key: cacheKey },
+          { last_accessed: Date.now() }
+        );
+
+        const responseData = {
+          title: cachedLyrics.title,
+          artist: cachedLyrics.artist,
+          image: cachedLyrics.image,
+          lyrics: cachedLyrics.lyrics,
+        };
+
+        lyricsCache.set(cacheKey, responseData);
+
+        return res.json(responseData);
+      }
+    } catch (cacheError) {
+      console.error("Error checking lyrics database cache:", cacheError);
+      // Continue with fetching if cache check fails
     }
 
     let cleanSongName = songname;
@@ -948,7 +992,24 @@ app.get("/api/lyrics", async (req, res) => {
     };
 
     lyricsCache.set(cacheKey, responseData);
-    console.log(`Cached lyrics for: ${cacheKey}`);
+
+    try {
+      await Lyrics.findOneAndUpdate(
+        { cache_key: cacheKey },
+        {
+          title: bestMatch.title,
+          artist: bestMatch.artist,
+          image: bestMatch.image,
+          lyrics: lyricsData.lyrics,
+          last_accessed: Date.now(),
+        },
+        { upsert: true, new: true }
+      );
+      console.log(`Cached lyrics in memory and database for: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error("Error caching lyrics in database:", cacheError);
+      // Continue serving the response even if database caching fails
+    }
 
     res.json(responseData);
   } catch (error) {

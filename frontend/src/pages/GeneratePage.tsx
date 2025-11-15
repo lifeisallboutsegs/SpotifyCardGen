@@ -784,14 +784,13 @@ export default function GeneratePage() {
                                   </span>
                                   <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden min-w-65">
                                     <div
-                                      className="h-3 rounded-full transition-all"
+                                      className="h-3 rounded-full transition-all duration-300 ease-linear"
                                       style={{
                                         width: `${
                                           (smoothProgress / playback.duration) *
                                           100
                                         }%`,
                                         backgroundColor: accentColor,
-                                        willChange: "width",
                                       }}
                                     />
                                   </div>
