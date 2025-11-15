@@ -11,8 +11,14 @@ import qs from "qs";
 import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
+import { SocksProxyAgent } from 'socks-proxy-agent';
 
 dotenv.config();
+
+const proxyAxios = axios.create({
+  httpsAgent: new SocksProxyAgent('socks5://vintfozd:tksi79o0bavq@45.38.107.97:6014'),
+  httpAgent: new SocksProxyAgent('socks5://vintfozd:tksi79o0bavq@45.38.107.97:6014')
+});
 
 const sessionSchema = new mongoose.Schema({
   session_id: { type: String, unique: true, required: true },
@@ -158,7 +164,7 @@ async function search(songname) {
 }
 
 async function getLyrics(lyricsUrl) {
-  const lyricsPageData = await axios.get(lyricsUrl);
+  const lyricsPageData = await proxyAxios.get(lyricsUrl);
   const $ = cheerio.load(lyricsPageData.data);
 
   const lyricsContainers = $('div[data-lyrics-container="true"]');

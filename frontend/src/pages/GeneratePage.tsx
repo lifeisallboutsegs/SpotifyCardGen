@@ -879,9 +879,9 @@ export default function GeneratePage() {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {recentlyPlayed.map((track) => (
+                      {recentlyPlayed.map((track, index) => (
                         <div
-                          key={track.id}
+                          key={`${track.id}-${index}`}
                           className={`group cursor-pointer rounded-lg p-3 transition-all duration-200 ${
                             theme === "light"
                               ? "hover:bg-gray-50 border border-transparent hover:border-gray-200"
@@ -943,7 +943,7 @@ export default function GeneratePage() {
                     <div className="space-y-1">
                       {topArtists.map((artist, index) => (
                         <div
-                          key={artist.id}
+                          key={`${artist.id}-${index}`}
                           className={`group cursor-pointer flex items-center gap-4 p-3 rounded-lg transition-all duration-200 ${
                             theme === "light"
                               ? "hover:bg-gray-100 border border-transparent hover:border-gray-200"
@@ -998,7 +998,7 @@ export default function GeneratePage() {
                     <div className="space-y-1">
                       {topTracks.map((track, index) => (
                         <div
-                          key={track.id}
+                          key={`${track.id}-${index}`}
                           className={`group cursor-pointer flex items-center gap-4 p-3 rounded-lg transition-all duration-200 ${
                             theme === "light"
                               ? "hover:bg-gray-100 border border-transparent hover:border-gray-200"
